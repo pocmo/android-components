@@ -4,4 +4,26 @@
 
 package mozilla.components.toolbar
 
-class BrowserToolbar
+import android.content.Context
+import android.util.AttributeSet
+import android.widget.FrameLayout
+import android.widget.TextView
+
+/**
+ * A customizable toolbar for browsers.
+ */
+class BrowserToolbar @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : FrameLayout(context, attrs, defStyleAttr), Toolbar {
+    private val urlView = TextView(context)
+
+    init {
+        addView(urlView)
+    }
+
+    override fun displayUrl(url: String) {
+        urlView.text = url
+    }
+}
