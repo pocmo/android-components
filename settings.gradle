@@ -3,17 +3,40 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Browser components
+// Concept
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-include ':browser-engine'
-project(':browser-engine').projectDir = new File(rootDir, 'components/browser/engine')
+include ':concept-toolbar'
+project(':concept-toolbar').projectDir = new File(rootDir, 'components/concept/toolbar')
+
+include ':concept-engine'
+project(':concept-engine').projectDir = new File(rootDir, 'components/concept/engine')
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Features
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+include ':feature-session'
+project(':feature-session').projectDir = new File(rootDir, 'components/feature/session')
+
+include ':feature-toolbar'
+project(':feature-toolbar').projectDir = new File(rootDir, 'components/feature/toolbar')
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Browser components
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 include ':browser-engine-gecko'
 project(':browser-engine-gecko').projectDir = new File(rootDir, 'components/browser/engine-gecko')
 
+include ':browser-engine-system'
+project(':browser-engine-system').projectDir = new File(rootDir, 'components/browser/engine-system')
+
 include ':browser-errorpages'
 project(':browser-errorpages').projectDir = new File(rootDir, 'components/browser/errorpages')
+
+include ':browser-search'
+project(':browser-search').projectDir = new File(rootDir, 'components/browser/search')
 
 include ':browser-session'
 project(':browser-session').projectDir = new File(rootDir, 'components/browser/session')
@@ -43,3 +66,11 @@ project(':support-ktx').projectDir = new File(rootDir, 'components/support/ktx')
 
 include ':support-utils'
 project(':support-utils').projectDir = new File(rootDir, 'components/support/utils')
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Samples
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+include ':samples-browser'
+project(':samples-browser').projectDir = new File(rootDir, 'samples/browser')
+
