@@ -18,7 +18,6 @@ tasks:
           - pull_request.edited
           - pull_request.synchronize
           - pull_request.reopened
-          - push
     scopes:
       - "queue:create-task:aws-provisioner-v1/github-worker"
       - "queue:scheduler-id:taskcluster-github"
@@ -43,6 +42,43 @@ tasks:
       description: Building and testing Android components - triggered by a pull request.
       owner: '{{ event.head.user.email }}'
       source: '{{ event.head.repo.url }}'
+####################################################################################################
+# Task: Master push (Snapshot)
+####################################################################################################
+  - provisionerId: '{{ taskcluster.docker.provisionerId }}'
+    workerType: '{{ taskcluster.docker.workerType }}'
+    extra:
+      github:
+        events:
+          - push
+    scopes:
+      - "secrets:get:project/android-components/publish"
+    payload:
+      maxRunTime: 3600
+      deadline: "{{ '2 hours' | $fromNow }}"
+      image: 'mozillamobile/android-components:1.4'
+      command:
+        - /bin/bash
+        - '--login'
+        - '-cx'
+        - >-
+          export TERM=dumb
+          && git fetch {{ event.head.repo.url }} {{ event.head.repo.branch }}
+          && git config advice.detachedHead false
+          && git checkout {{event.head.sha}}
+          && ./gradlew -Psnapshot --no-daemon clean test detektCheck ktlint assembleRelease docs
+          && python automation/taskcluster/release/fetch-bintray-api-key.py
+          && echo "libRepositoryName=android-components-snapshots" >> gradle.properties
+          && echo "libUserOrg=mozilla-mobile" >> gradle.properties
+          && ./gradlew -Psnapshot bintrayUpload --debug
+      features:
+        taskclusterProxy: true
+    metadata:
+      name: Android Components - Snapshot
+      description: Building and publishing SNAPSHOT versions.
+      owner: '{{ event.head.user.email }}'
+      source: '{{ event.head.repo.url }}'
+
 ####################################################################################################
 # Task: Release
 ####################################################################################################
@@ -69,6 +105,8 @@ tasks:
           && git checkout {{ event.version }}
           && ./gradlew --no-daemon clean test detektCheck ktlint assembleRelease docs
           && python automation/taskcluster/release/fetch-bintray-api-key.py
+          && echo "libRepositoryName=Mozilla-Mobile" >> gradle.properties
+          && echo "libUserOrg=pocmo" >> gradle.properties
           && ./gradlew bintrayUpload --debug
       features:
         taskclusterProxy: true

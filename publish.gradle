@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 def libRepoName = properties.libRepositoryName
+def libUserOrg = properties.libUserOrg
 def libUrl = properties.libUrl
 def libVcsUrl = properties.libVcsUrl
 def libLicense = properties.libLicense
@@ -10,6 +11,7 @@ def libLicenseUrl = properties.libLicenseUrl
 
 ext.configurePublish = { groupIdArg, artifactIdArg, descriptionArg ->
     apply plugin: 'com.github.dcendents.android-maven'
+    apply plugin: 'maven-publish'
 
     group = groupIdArg
 
@@ -52,7 +54,7 @@ ext.configurePublish = { groupIdArg, artifactIdArg, descriptionArg ->
 
     apply plugin: 'com.jfrog.bintray'
 
-    version = rootProject.ext.library['version']
+    version = rootProject.ext.library['version'] + (rootProject.hasProperty('snapshot') ? '-SNAPSHOT' : '')
 
     task sourcesJar(type: Jar) {
         from android.sourceSets.main.java.srcDirs
@@ -88,11 +90,12 @@ ext.configurePublish = { groupIdArg, artifactIdArg, descriptionArg ->
         pkg {
             repo = libRepoName
             name = artifactIdArg
+            userOrg = libUserOrg
             desc = descriptionArg
             websiteUrl = libUrl
             vcsUrl = libVcsUrl
             licenses = [libLicense]
-            publish = true
+            publish = false
             publicDownloadNumbers = true
         }
     }
