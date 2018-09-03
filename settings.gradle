@@ -146,3 +146,13 @@ project(':samples-firefox-accounts').projectDir = new File(rootDir, 'samples/fir
 
 include ':samples-toolbar'
 project(':samples-toolbar').projectDir = new File(rootDir, 'samples/toolbar')
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Incubator - Experimental components
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+include ':incubator-browser-state'
+project(':incubator-browser-state').projectDir = new File(rootDir, 'components/incubator/browser/state')
+
+include ':incubator-samples-state-browser'
+project(':incubator-samples-state-browser').projectDir = new File(rootDir, 'components/incubator/samples/state-browser')
