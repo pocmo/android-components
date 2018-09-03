@@ -13,22 +13,25 @@ import mozilla.components.browser.domains.autocomplete.ShippedDomainsProvider
 import mozilla.components.browser.engine.system.SystemEngine
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.menu.BrowserMenuBuilder
-import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.BrowserMenuCheckbox
 import mozilla.components.browser.menu.item.BrowserMenuDivider
 import mozilla.components.browser.menu.item.BrowserMenuImageText
+import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.SimpleBrowserMenuItem
 import mozilla.components.browser.search.SearchEngineManager
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.browser.session.state.BrowserState
+import mozilla.components.browser.session.state.SessionState
 import mozilla.components.browser.session.storage.SessionStorage
+import mozilla.components.browser.session.store.BrowserStore
 import mozilla.components.browser.storage.memory.InMemoryHistoryStorage
 import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.Engine
 import mozilla.components.feature.intent.IntentProcessor
 import mozilla.components.feature.search.SearchUseCases
-import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.session.HistoryDelegate
+import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import org.mozilla.samples.browser.integration.FindInPageIntegration
@@ -47,6 +50,12 @@ open class DefaultComponents(private val applicationContext: Context) {
         }
     }
 
+    val store: BrowserStore by lazy {
+        val state = BrowserState(emptyList(), "")
+
+        BrowserStore(state)
+    }
+
     // Engine
     open val engine: Engine by lazy {
         SystemEngine(applicationContext, engineSettings)
@@ -60,13 +69,15 @@ open class DefaultComponents(private val applicationContext: Context) {
     private val sessionStorage by lazy { SessionStorage(applicationContext, engine) }
 
     val sessionManager by lazy {
-        SessionManager(engine,
-                defaultSession = { Session("about:blank") }
+        SessionManager(
+            engine,
+            defaultSession = { Session("about:blank") },
+            store = store
         ).apply {
-            sessionStorage.restore()?.let { snapshot -> restore(snapshot) }
+            // sessionStorage.restore()?.let { snapshot -> restore(snapshot) }
 
             if (size == 0) {
-                add(Session("https://www.mozilla.org"))
+                add(Session("https://www.theverge.com"))
             }
 
             sessionStorage.autoSave(this)

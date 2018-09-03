@@ -11,12 +11,10 @@ import android.content.Intent
 import android.support.annotation.VisibleForTesting
 import android.support.design.widget.Snackbar
 import android.view.View
-import mozilla.components.browser.session.Download
 import mozilla.components.browser.session.Session
+import mozilla.components.browser.session.state.SessionState
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.feature.tabs.TabsUseCases
-import mozilla.components.support.base.observer.Consumable
-import mozilla.components.support.utils.DownloadUtils
 
 /**
  * A candidate for an item to be displayed in the context menu.
@@ -30,8 +28,8 @@ import mozilla.components.support.utils.DownloadUtils
 data class ContextMenuCandidate(
     val id: String,
     val label: String,
-    val showFor: (Session, HitResult) -> Boolean,
-    val action: (Session, HitResult) -> Unit
+    val showFor: (SessionState, HitResult) -> Boolean,
+    val action: (SessionState, HitResult) -> Unit
 ) {
     companion object {
         @VisibleForTesting internal var snackbarDelegate = SnackbarDelegate()
@@ -67,8 +65,11 @@ data class ContextMenuCandidate(
             label = context.getString(R.string.mozac_feature_contextmenu_open_link_in_new_tab),
             showFor = { session, hitResult -> hitResult.isLink() && !session.private },
             action = { parent, hitResult ->
+
+
                 val session = tabsUseCases.addTab.invoke(
-                    hitResult.getLink(), selectTab = false, startLoading = true, parent = parent)
+                    hitResult.getLink(), selectTab = false, startLoading = true)
+                // TODO: Parent!
 
                 snackbarDelegate.show(
                     snackBarParentView = snackBarParentView,
@@ -94,7 +95,9 @@ data class ContextMenuCandidate(
             showFor = { _, hitResult -> hitResult.isLink() },
             action = { parent, hitResult ->
                 val session = tabsUseCases.addPrivateTab.invoke(
-                    hitResult.src, selectTab = false, startLoading = true, parent = parent)
+                    hitResult.src, selectTab = false, startLoading = true)
+
+                // TODO: Parent!
 
                 snackbarDelegate.show(
                     snackBarParentView,
@@ -119,12 +122,15 @@ data class ContextMenuCandidate(
             label = context.getString(R.string.mozac_feature_contextmenu_open_image_in_new_tab),
             showFor = { _, hitResult -> hitResult.isImage() },
             action = { parent, hitResult ->
+                /*
                 val session = if (parent.private) {
                     tabsUseCases.addPrivateTab.invoke(
                         hitResult.src, selectTab = false, startLoading = true, parent = parent)
+                    // TODO: Parent!
                 } else {
                     tabsUseCases.addTab.invoke(
                         hitResult.src, selectTab = false, startLoading = true, parent = parent)
+                    // TODO: Parent!
                 }
 
                 snackbarDelegate.show(
@@ -135,7 +141,9 @@ data class ContextMenuCandidate(
                 ) {
                     tabsUseCases.selectTab.invoke(session)
                 }
+                */
             }
+
         )
 
         /**
@@ -148,9 +156,11 @@ data class ContextMenuCandidate(
             label = context.getString(R.string.mozac_feature_contextmenu_save_image),
             showFor = { _, hitResult -> hitResult.isImage() },
             action = { session, hitResult ->
+                /*
                 session.download = Consumable.from(Download(
                     hitResult.src,
                     DownloadUtils.guessFileName(null, hitResult.src, null)))
+                    */
             }
         )
 

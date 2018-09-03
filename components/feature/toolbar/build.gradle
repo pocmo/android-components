@@ -24,6 +24,7 @@ android {
 dependencies {
     implementation project(':feature-session')
     implementation project(':browser-session')
+    implementation project(':browser-state')
     implementation project(':browser-domains')
     implementation project(':concept-toolbar')
     implementation project(':concept-storage')

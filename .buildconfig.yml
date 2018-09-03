@@ -1,5 +1,9 @@
 componentsVersion: 0.50.0
 projects:
+  incubator-browser:
+    path: components/incubator/samples/state-browser
+    description: 'An abstract definition of an awesomebar component.'
+    publish:
   concept-awesomebar:
     path: components/concept/awesomebar
     description: 'An abstract definition of an awesomebar component.'
@@ -280,6 +284,10 @@ projects:
     path: components/tooling/fetch-tests
     description: 'Test cases for concept-fetch implementations.'
     publish: false
+  browser-state:
+    path: components/browser/state
+    description: '...'
+    publish: false
   samples-browser:
     path: samples/browser
     description: 'A simple browser composed from browser components.'
@@ -316,3 +324,4 @@ projects:
     path: samples/dataprotect
     description: 'An app demoing how to use the Dataprotect component to load and store encrypted data in SharedPreferences.'
     publish: false
+

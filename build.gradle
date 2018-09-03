@@ -170,6 +170,7 @@ subprojects {
 
 evaluationDependsOnChildren()
 
+/*
 task docs(type: org.jetbrains.dokka.gradle.DokkaAndroidTask, overwrite: true) {
     moduleName = "$rootProject.name"
     outputDirectory = "$buildDir/javadoc"
@@ -204,7 +205,7 @@ task docs(type: org.jetbrains.dokka.gradle.DokkaAndroidTask, overwrite: true) {
         return path
     })
 }
-
+*/
 
 task clean(type: Delete) {
     delete rootProject.buildDir

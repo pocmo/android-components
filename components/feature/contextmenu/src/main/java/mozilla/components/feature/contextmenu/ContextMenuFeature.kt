@@ -7,9 +7,14 @@ package mozilla.components.feature.contextmenu
 import android.support.annotation.VisibleForTesting
 import android.support.v4.app.FragmentManager
 import android.view.HapticFeedbackConstants
-import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.browser.session.action.SessionAction
+import mozilla.components.browser.session.helper.onlyIfChanged
+import mozilla.components.browser.session.selector.findSession
+import mozilla.components.browser.session.selector.findSessionOrSelected
+import mozilla.components.browser.session.state.SessionState
+import mozilla.components.browser.session.store.BrowserStore
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.feature.contextmenu.facts.emitClickFact
@@ -35,12 +40,14 @@ internal const val FRAGMENT_TAG = "mozac_feature_contextmenu_dialog"
  */
 class ContextMenuFeature(
     private val fragmentManager: FragmentManager,
-    private val sessionManager: SessionManager,
+    private val store: BrowserStore,
     private val candidates: List<ContextMenuCandidate>,
     private val engineView: EngineView,
     private val sessionId: String? = null
 ) : LifecycleAwareFeature {
-    private val observer = ContextMenuObserver(sessionManager, feature = this)
+    //private val observer = ContextMenuObserver(sessionManager, feature = this)
+
+    private var subscription: BrowserStore.Subscription? = null
 
     /**
      * Start observing the selected session and when needed show a context menu.
@@ -53,21 +60,30 @@ class ContextMenuFeature(
             reattachFragment(fragment as ContextMenuFragment)
         }
 
-        observer.start(sessionId)
+        subscription = store.observe(
+            observer = onlyIfChanged(
+                onMainThread = true,
+                map = { state -> state.findSessionOrSelected(sessionId)?.hitResult },
+                then = { state, hitResult ->
+                    onLongPress(state.findSessionOrSelected(sessionId)!!, hitResult)
+                }
+            )
+        )
     }
 
     /**
      * Stop observing the selected session and do not show any context menus anymore.
      */
     override fun stop() {
-        observer.stop()
+        subscription?.unsubscribe()
     }
 
     /**
      * Re-attach a fragment that is still visible but not linked to this feature anymore.
      */
     private fun reattachFragment(fragment: ContextMenuFragment) {
-        val session = sessionManager.findSessionById(fragment.sessionId)
+        /*
+        val session = sessionManager.findSession(fragment.sessionId)
 
         if (session == null || session.hitResult.isConsumed()) {
             // If the session no longer exists or if it has no hit result (from long pressing) attached anymore then
@@ -81,9 +97,10 @@ class ContextMenuFeature(
         // Re-assign the feature instance so that the fragment can invoke us once the user makes a selection or cancels
         // the dialog.
         fragment.feature = this
+        */
     }
 
-    internal fun onLongPress(session: Session, hitResult: HitResult) {
+    internal fun onLongPress(session: SessionState, hitResult: HitResult) {
         val (ids, labels) = candidates
             .filter { candidate -> candidate.showFor(session, hitResult) }
             .fold(Pair(mutableListOf<String>(), mutableListOf<String>())) { items, candidate ->
@@ -94,7 +111,7 @@ class ContextMenuFeature(
 
         // We have no context menu items to show for this HitResult. Let's consume it to remove it from the Session.
         if (ids.isEmpty()) {
-            session.hitResult.consume { true }
+            store.dispatch(SessionAction.ConsumeHitResultAction(session.id))
             return
         }
 
@@ -107,36 +124,21 @@ class ContextMenuFeature(
     }
 
     internal fun onMenuItemSelected(sessionId: String, itemId: String) {
-        val session = sessionManager.findSessionById(sessionId) ?: return
+        val session = store.getState().findSession(sessionId) ?: return
+        val hitResult = session.hitResult ?: return
         val candidate = candidates.find { it.id == itemId } ?: return
 
-        session.hitResult.consume { hitResult ->
-            candidate.action.invoke(session, hitResult)
-            emitClickFact(candidate)
-            true
-        }
+        candidate.action.invoke(session, hitResult)
+
+        emitClickFact(candidate)
+
+        store.dispatch(SessionAction.ConsumeHitResultAction(session.id))
     }
 
     internal fun onMenuCancelled(sessionId: String) {
-        val session = sessionManager.findSessionById(sessionId) ?: return
+        /*
+        val session = sessionManager.findSession(sessionId) ?: return
         session.hitResult.consume { true }
-    }
-}
-
-/**
- * Observes [Session.Observer.onLongPress] of the selected session and notifies the feature whenever a context menu
- * needs to be shown.
- */
-internal class ContextMenuObserver(
-    sessionManager: SessionManager,
-    private val feature: ContextMenuFeature
-) : SelectionAwareSessionObserver(sessionManager) {
-    override fun onLongPress(session: Session, hitResult: HitResult): Boolean {
-        feature.onLongPress(session, hitResult)
-        return false
-    }
-
-    fun start(sessionId: String?) {
-        observeIdOrSelected(sessionId)
+        */
     }
 }

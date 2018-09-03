@@ -18,6 +18,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import mozilla.components.browser.session.Session
+import mozilla.components.browser.session.state.SessionState
 
 private const val KEY_TITLE = "title"
 private const val KEY_SESSION_ID = "session_id"
@@ -81,7 +82,7 @@ class ContextMenuFragment : DialogFragment() {
          * Create a new [ContextMenuFragment].
          */
         fun create(
-            session: Session,
+            session: SessionState,
             title: String,
             ids: List<String>,
             labels: List<String>

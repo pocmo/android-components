@@ -66,6 +66,7 @@ class BrowserFragment : Fragment(), BackHandler {
             feature = ToolbarFeature(
                 layout.toolbar,
                 components.sessionManager,
+                components.store,
                 components.sessionUseCases.loadUrl,
                 components.defaultSearchUseCase,
                 sessionId),
@@ -106,7 +107,7 @@ class BrowserFragment : Fragment(), BackHandler {
 
         val contextMenuFeature = ContextMenuFeature(
             requireFragmentManager(),
-            components.sessionManager,
+            components.store,
             ContextMenuCandidate.defaultCandidates(
                 requireContext(),
                 components.tabsUseCases,

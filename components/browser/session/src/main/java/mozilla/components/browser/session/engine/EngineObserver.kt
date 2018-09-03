@@ -8,6 +8,8 @@ import android.graphics.Bitmap
 import android.os.Environment
 import mozilla.components.browser.session.Download
 import mozilla.components.browser.session.Session
+import mozilla.components.browser.session.action.SessionAction
+import mozilla.components.browser.session.store.BrowserStore
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.concept.engine.media.Media
@@ -17,9 +19,16 @@ import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.support.base.observer.Consumable
 
 @Suppress("TooManyFunctions")
-internal class EngineObserver(val session: Session) : EngineSession.Observer {
+internal class EngineObserver(
+    val session: Session
+) : EngineSession.Observer {
+    internal var store: BrowserStore? = null
 
     override fun onLocationChange(url: String) {
+        store?.dispatch(
+            SessionAction.UpdateUrlAction(session.id, url)
+        )
+
         session.url = url
         session.searchTerms = ""
         session.title = ""
@@ -66,7 +75,12 @@ internal class EngineObserver(val session: Session) : EngineSession.Observer {
     }
 
     override fun onLongPress(hitResult: HitResult) {
-        session.hitResult = Consumable.from(hitResult)
+        session.hitResult = Consumable.from(hitResult) {
+            store?.dispatch(SessionAction.ConsumeHitResultAction(session.id))
+        }.also {
+            store?.dispatch(SessionAction.AddHitResultAction(session.id, hitResult))
+        }
+
     }
 
     override fun onFind(text: String) {

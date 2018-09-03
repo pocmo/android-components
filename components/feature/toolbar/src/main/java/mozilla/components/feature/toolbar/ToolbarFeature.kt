@@ -7,6 +7,7 @@ package mozilla.components.feature.toolbar
 import android.support.annotation.ColorInt
 import mozilla.components.concept.toolbar.Toolbar
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.browser.session.store.BrowserStore
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
 import mozilla.components.support.base.feature.BackHandler
@@ -24,12 +25,13 @@ typealias SearchUseCase = (String) -> Unit
 class ToolbarFeature(
     val toolbar: Toolbar,
     sessionManager: SessionManager,
+    store: BrowserStore,
     loadUrlUseCase: SessionUseCases.LoadUrlUseCase,
     searchUseCase: SearchUseCase? = null,
     sessionId: String? = null,
     urlRenderConfiguration: UrlRenderConfiguration? = null
 ) : LifecycleAwareFeature, BackHandler {
-    private val presenter = ToolbarPresenter(toolbar, sessionManager, sessionId, urlRenderConfiguration)
+    private val presenter = ToolbarPresenter(toolbar, sessionManager, store, sessionId, urlRenderConfiguration)
     private val interactor = ToolbarInteractor(toolbar, loadUrlUseCase, searchUseCase)
 
     /**

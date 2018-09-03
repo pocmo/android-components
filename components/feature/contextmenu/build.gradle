@@ -23,11 +23,13 @@ android {
 
 dependencies {
     implementation project(':concept-engine')
+    implementation project(':browser-state')
     implementation project(':feature-tabs')
     implementation project(':browser-session')
     implementation project(':support-utils')
 
     implementation Dependencies.kotlin_stdlib
+    implementation Dependencies.kotlin_coroutines
     implementation Dependencies.support_design
 
     testImplementation Dependencies.testing_junit

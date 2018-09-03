@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?><!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".BrowserActivity">
+
+    <Button
+        android:id="@+id/backView"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:text="&lt;"
+        app:layout_constraintBottom_toBottomOf="@+id/progressView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/forwardiew"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:text="&gt;"
+        app:layout_constraintBottom_toBottomOf="@+id/progressView"
+        app:layout_constraintStart_toEndOf="@id/backView"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <mozilla.components.ui.autocomplete.InlineAutocompleteEditText
+        android:id="@+id/toolbarView"
+        android:layout_width="0dp"
+        android:layout_height="55dp"
+        app:layout_constraintStart_toEndOf="@id/forwardiew"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="https://www.mozilla.org" />
+
+    <ProgressBar
+        android:id="@+id/progressView"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:max="100"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toolbarView" />
+
+    <org.mozilla.geckoview.GeckoView
+        android:id="@+id/geckoView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/progressView" />
+
+
+</android.support.constraint.ConstraintLayout>
