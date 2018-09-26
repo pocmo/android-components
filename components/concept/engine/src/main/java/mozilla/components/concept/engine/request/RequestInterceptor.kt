@@ -20,6 +20,15 @@ interface RequestInterceptor {
     )
 
     /**
+     * A custom error page response.
+     */
+    data class ErrorResponse(
+        val data: String,
+        val mimeType: String = "text/html",
+        val encoding: String = "UTF-8"
+    )
+
+    /**
      * A request to open an URI. This is called before each page load to allow custom behavior implementation.
      *
      * @param session The engine session that initiated the callback.
@@ -34,6 +43,8 @@ interface RequestInterceptor {
      * @param session The engine session that initiated the callback.
      * @param errorCode The error code that was provided by the engine related to the type of error caused.
      * @param uri The uri that resulted in the error.
+     * @return An ErrorResponse object containing the custom error page content. A default error page
+     *         will be shown if <code>null</code> is returned.
      */
-    fun onErrorRequest(session: EngineSession, errorCode: Int, uri: String?) = Unit
+    fun onErrorRequest(session: EngineSession, errorCode: Int, uri: String?): ErrorResponse? = null
 }

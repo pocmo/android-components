@@ -204,11 +204,21 @@ class SystemEngineView @JvmOverloads constructor(
         @TargetApi(Build.VERSION_CODES.M)
         override fun onReceivedError(view: WebView?, request: WebResourceRequest, error: WebResourceError) {
             session?.let { session ->
-                if (request.isForMainFrame) {
-                    session.settings.requestInterceptor?.onErrorRequest(
-                        session,
-                        error.errorCode,
-                        request.url.toString()
+                if (!request.isForMainFrame) {
+                    return
+                }
+
+                session.settings.requestInterceptor?.onErrorRequest(
+                    session,
+                    error.errorCode,
+                    request.url.toString()
+                )?.let { response ->
+                    session.currentView()?.loadDataWithBaseURL(
+                        request.url.toString(),
+                        response.data,
+                        response.mimeType,
+                        response.encoding,
+                        null
                     )
                 }
             }
