@@ -29,7 +29,6 @@ dependencies {
     implementation project(':support-ktx')
     implementation project(':support-base')
 
-
     testImplementation Deps.testing_junit
     testImplementation Deps.testing_robolectric
     testImplementation Deps.testing_mockito

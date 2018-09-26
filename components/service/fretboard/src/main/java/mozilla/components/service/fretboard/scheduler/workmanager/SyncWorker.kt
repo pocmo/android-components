@@ -4,13 +4,26 @@
 
 package mozilla.components.service.fretboard.scheduler.workmanager
 
+import android.content.Context
 import androidx.work.Worker
+import androidx.work.WorkerParameters
 import mozilla.components.service.fretboard.Fretboard
 
-abstract class SyncWorker : Worker() {
+/**
+ * [Worker] implementation for updating the fretboard configuration in the background.
+ *
+ * Extend this class and provide a fretboard instance.
+ */
+abstract class SyncWorker(
+    context: Context,
+    workerParams: WorkerParameters
+) : Worker(context, workerParams) {
     override fun doWork(): Result {
-        getFretboard().updateExperiments()
-        return Result.SUCCESS
+        return if (fretboard.updateExperiments()) {
+            Result.SUCCESS
+        } else {
+            Result.RETRY
+        }
     }
 
     /**
@@ -19,5 +32,5 @@ abstract class SyncWorker : Worker() {
      *
      * @return current Fretboard instance
      */
-    abstract fun getFretboard(): Fretboard
+    abstract val fretboard: Fretboard
 }
