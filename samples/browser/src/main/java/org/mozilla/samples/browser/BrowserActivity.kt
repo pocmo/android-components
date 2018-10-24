@@ -10,7 +10,9 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.AttributeSet
 import android.view.View
+import mozilla.components.browser.awesomebar.BrowserAwesomeBar
 import mozilla.components.browser.tabstray.BrowserTabsTray
+import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.tabstray.TabsTray
 import mozilla.components.feature.intent.IntentProcessor
@@ -45,6 +47,7 @@ open class BrowserActivity : AppCompatActivity(), ComponentCallbacks2 {
         when (name) {
             EngineView::class.java.name -> components.engine.createView(context, attrs).asView()
             TabsTray::class.java.name -> BrowserTabsTray(context, attrs)
+            AwesomeBar::class.java.name -> BrowserAwesomeBar(context, attrs)
             else -> super.onCreateView(parent, name, context, attrs)
         }
 

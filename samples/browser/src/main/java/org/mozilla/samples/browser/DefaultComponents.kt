@@ -54,12 +54,12 @@ open class DefaultComponents(private val applicationContext: Context) {
     val sessionUseCases by lazy { SessionUseCases(sessionManager) }
 
     // Search
-    private val searchEngineManager by lazy {
+    val searchEngineManager by lazy {
         SearchEngineManager().apply {
             async { load(applicationContext) }
         }
     }
-    private val searchUseCases by lazy { SearchUseCases(applicationContext, searchEngineManager, sessionManager) }
+    val searchUseCases by lazy { SearchUseCases(applicationContext, searchEngineManager, sessionManager) }
     val defaultSearchUseCase by lazy { { searchTerms: String -> searchUseCases.defaultSearch.invoke(searchTerms) } }
 
     // Intent

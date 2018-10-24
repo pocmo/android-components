@@ -81,6 +81,13 @@ interface Toolbar {
     fun setOnEditListener(listener: OnEditListener)
 
     /**
+     * TODO
+     */
+    fun displayMode()
+
+    fun editMode()
+
+    /**
      * Listener to be invoked when the user edits the URL.
      */
     interface OnEditListener {
