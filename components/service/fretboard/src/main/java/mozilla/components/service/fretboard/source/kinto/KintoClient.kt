@@ -4,7 +4,10 @@
 
 package mozilla.components.service.fretboard.source.kinto
 
-import java.net.URL
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.Request
+import mozilla.components.service.fretboard.ExperimentDownloadException
+import java.io.IOException
 
 /**
  * Helper class to make it easier to interact with Kinto
@@ -16,11 +19,10 @@ import java.net.URL
  * @property headers headers to provide along with the request
  */
 internal class KintoClient(
-    private val httpClient: HttpClient = HttpURLConnectionHttpClient(),
+    private val httpClient: Client,
     private val baseUrl: String,
     private val bucketName: String,
-    private val collectionName: String,
-    private val headers: Map<String, String>? = null
+    private val collectionName: String
 ) {
 
     /**
@@ -28,8 +30,15 @@ internal class KintoClient(
      *
      * @return Kinto response with all records
      */
+    @Throws(ExperimentDownloadException::class)
     fun get(): String {
-        return httpClient.get(URL(recordsUrl()), headers)
+        try {
+            return httpClient.fetch(
+                Request(recordsUrl())
+            ).body.string()
+        } catch(e: IOException) {
+            throw ExperimentDownloadException(e)
+        }
     }
 
     /**
@@ -39,8 +48,15 @@ internal class KintoClient(
      *
      * @return Kinto diff response
      */
+    @Throws(ExperimentDownloadException::class)
     fun diff(lastModified: Long): String {
-        return httpClient.get(URL("${recordsUrl()}?_since=$lastModified"), headers)
+        try {
+            return httpClient.fetch(
+                Request("${recordsUrl()}?_since=$lastModified")
+            ).body.string()
+        } catch (e: IOException) {
+            throw ExperimentDownloadException(e)
+        }
     }
 
     /**
@@ -49,7 +65,13 @@ internal class KintoClient(
      * @return collection metadata
      */
     fun getMetadata(): String {
-        return httpClient.get(URL(collectionUrl()))
+        try {
+            return httpClient.fetch(
+                Request(collectionUrl())
+            ).body.string()
+        } catch (e: IOException) {
+            throw ExperimentDownloadException(e)
+        }
     }
 
     private fun recordsUrl() = "${collectionUrl()}/records"

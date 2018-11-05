@@ -36,8 +36,8 @@ import kotlin.jvm.functions.Function0;
 public class Telemetry {
     private final TelemetryConfiguration configuration;
     private final TelemetryStorage storage;
-    private final TelemetryClient client;
     private final TelemetryScheduler scheduler;
+    private final TelemetryClient client;
 
     private final Map<String, TelemetryPingBuilder> pingBuilders;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();

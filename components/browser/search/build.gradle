@@ -33,6 +33,7 @@ android {
 
 
 dependencies {
+    implementation project(':concept-fetch')
     implementation project(':support-ktx')
 
     implementation Deps.kotlin_stdlib

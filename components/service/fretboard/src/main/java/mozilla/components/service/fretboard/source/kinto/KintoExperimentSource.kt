@@ -4,6 +4,7 @@
 
 package mozilla.components.service.fretboard.source.kinto
 
+import mozilla.components.concept.fetch.Client
 import mozilla.components.service.fretboard.ExperimentDownloadException
 import mozilla.components.service.fretboard.ExperimentSource
 import mozilla.components.service.fretboard.ExperimentsSnapshot
@@ -21,11 +22,11 @@ import org.json.JSONObject
  * @property client http client to use
  */
 class KintoExperimentSource(
+    client: Client,
     private val baseUrl: String,
     private val bucketName: String,
     private val collectionName: String,
-    private val validateSignature: Boolean = false,
-    client: HttpClient = HttpURLConnectionHttpClient()
+    private val validateSignature: Boolean = false
 ) : ExperimentSource {
     private val kintoClient = KintoClient(client, baseUrl, bucketName, collectionName)
     private val signatureVerifier = SignatureVerifier(client, kintoClient)

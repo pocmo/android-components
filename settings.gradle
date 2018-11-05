@@ -19,6 +19,7 @@ def setupProject(name, path, description) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 setupProject(':concept-awesomebar', 'components/concept/awesomebar', 'An abstract definition of an awesomebar component.')
+setupProject(':concept-fetch', 'components/concept/fetch', 'An abstract definition of an HTTP client for fetching resources.')
 setupProject(':concept-toolbar', 'components/concept/toolbar', 'An abstract definition of a toolbar component.')
 setupProject(':concept-tabstray', 'components/concept/tabstray', 'An abstract definition of a tabs tray component.')
 setupProject(':concept-engine', 'components/concept/engine', 'An abstract layer hiding the actual browser engine implementation.')
@@ -72,7 +73,7 @@ setupProject(':ui-tabcounter', 'components/ui/tabcounter', 'A tab counter for br
 setupProject(':service-firefox-accounts', 'components/service/firefox-accounts', 'A library for integrating with Firefox Accounts.')
 setupProject(':service-sync-logins', 'components/service/sync-logins', 'A library for integrating with Firefox Sync - Logins.')
 setupProject(':service-fretboard', 'components/service/fretboard', 'An Android framework for segmenting users in order to run A/B tests and rollout features gradually.')
-setupProject(':service-glean', 'components/service/glean', 'A client-side telemetry SDK for collecting metrics and sending them to Mozilla\'s telemetry service')
+//setupProject(':service-glean', 'components/service/glean', 'A client-side telemetry SDK for collecting metrics and sending them to Mozilla\'s telemetry service')
 setupProject(':service-telemetry', 'components/service/telemetry', 'A generic library for generating and sending telemetry pings from Android applications to Mozilla\'s telemetry service.')
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +91,8 @@ setupProject(':support-utils', 'components/support/utils', 'A collection of gene
 
 setupProject(':lib-crash', 'components/lib/crash', 'A generic crash reporter library that can report crashes to multiple services.')
 setupProject(':lib-dataprotect', 'components/lib/dataprotect', 'A component using AndroidKeyStore to protect user data.')
+setupProject(':lib-fetch-httpurlconnection', 'components/lib/fetch-httpurlconnection', 'An implementation of lib-fetch based on HttpUrlConnection')
+setupProject(':lib-fetch-okhttp', 'components/lib/fetch-okhttp', 'An implementation of lib-fetch based on OkHttp')
 setupProject(':lib-jexl', 'components/lib/jexl', 'Javascript Expression Language: Powerful context-based expression parser and evaluator.')
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +108,7 @@ setupProject(':tooling-lint', 'components/tooling/lint', 'Custom Lint checks for
 setupProject(':samples-browser', 'samples/browser', 'A simple browser composed from browser components.')
 setupProject(':samples-crash', 'samples/crash', 'An app showing the integration of the lib-crash component.')
 setupProject(':samples-firefox-accounts', 'samples/firefox-accounts', 'A simple app demoing Firefox Accounts integration.')
-setupProject(':samples-glean', 'samples/glean', 'An app demoing how to use the Glean library to collect and send telemetry data.')
+//setupProject(':samples-glean', 'samples/glean', 'An app demoing how to use the Glean library to collect and send telemetry data.')
 setupProject(':samples-sync-logins', 'samples/sync-logins', 'A simple app demoing Firefox Sync (Logins) integration.')
 setupProject(':samples-toolbar', 'samples/toolbar', 'An app demoing multiple customized toolbars using the browser-toolbar component.')
 setupProject(':samples-dataprotect', 'samples/dataprotect', 'An app demoing how to use the Dataprotect component to load and store encrypted data in SharedPreferences.')

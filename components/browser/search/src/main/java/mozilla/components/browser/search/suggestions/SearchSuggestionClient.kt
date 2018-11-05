@@ -4,21 +4,19 @@
 
 package mozilla.components.browser.search.suggestions
 
+import kotlinx.coroutines.experimental.async
 import mozilla.components.browser.search.SearchEngine
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.Request
 import org.json.JSONException
 import java.io.IOException
-
-/**
- * Async function responsible for taking a URL and returning the results
- */
-typealias SearchSuggestionFetcher = suspend (url: String) -> String?
 
 /**
  *  Provides an interface to get search suggestions from a given SearchEngine.
  */
 class SearchSuggestionClient(
     private val searchEngine: SearchEngine,
-    private val fetcher: SearchSuggestionFetcher
+    private val client: Client
 ) {
 
     /**
@@ -37,18 +35,22 @@ class SearchSuggestionClient(
      * Gets search suggestions for a given query
      */
     suspend fun getSuggestions(query: String): List<String>? {
-        val suggestionsURL = searchEngine.buildSuggestionsURL(query)
+        val suggestionsURL = searchEngine.buildSuggestionsURL(query) ?: return null
 
         val parser = selectResponseParser(searchEngine)
 
         val suggestionResults = try {
-            suggestionsURL?.let { fetcher(it) }
+            async {
+                client.fetch(Request(suggestionsURL)).use { response ->
+                    response.body.string()
+                }
+            }
         } catch (_: IOException) {
             throw FetchException()
         }
 
         return try {
-            suggestionResults?.let(parser)
+            parser(suggestionResults.await())
         } catch (_: JSONException) {
             throw ResponseParserException()
         }

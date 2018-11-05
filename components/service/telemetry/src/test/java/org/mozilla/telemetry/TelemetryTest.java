@@ -12,6 +12,8 @@ import android.os.AsyncTask;
 import android.os.PersistableBundle;
 import android.preference.PreferenceManager;
 
+import mozilla.components.lib.fetch.httpurlconnection.HttpUrlConnectionClient;
+import mozilla.components.lib.fetch.httpurlconnection.HttpUrlConnectionClientKt;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
@@ -20,7 +22,6 @@ import org.junit.runner.RunWith;
 import org.mozilla.telemetry.config.TelemetryConfiguration;
 import org.mozilla.telemetry.event.TelemetryEvent;
 import org.mozilla.telemetry.measurement.*;
-import org.mozilla.telemetry.net.HttpURLConnectionTelemetryClient;
 import org.mozilla.telemetry.net.TelemetryClient;
 import org.mozilla.telemetry.ping.TelemetryCorePingBuilder;
 import org.mozilla.telemetry.ping.TelemetryEventPingBuilder;
@@ -81,7 +82,7 @@ public class TelemetryTest {
         final TelemetryPingSerializer serializer = new JSONPingSerializer();
         final FileTelemetryStorage storage = new FileTelemetryStorage(configuration, serializer);
 
-        final TelemetryClient client = spy(new HttpURLConnectionTelemetryClient());
+        final TelemetryClient client = spy(new TelemetryClient(new HttpUrlConnectionClient()));
         final TelemetryScheduler scheduler = new JobSchedulerTelemetryScheduler();
 
         final TelemetryCorePingBuilder pingBuilder = spy(new TelemetryCorePingBuilder(configuration));
@@ -165,7 +166,7 @@ public class TelemetryTest {
         final TelemetryPingSerializer serializer = new JSONPingSerializer();
         final FileTelemetryStorage storage = new FileTelemetryStorage(configuration, serializer);
 
-        final TelemetryClient client = spy(new HttpURLConnectionTelemetryClient());
+        final TelemetryClient client = spy(new TelemetryClient(new HttpUrlConnectionClient()));
         final TelemetryScheduler scheduler = new JobSchedulerTelemetryScheduler();
 
         final TelemetryMobileEventPingBuilder pingBuilder = spy(new TelemetryMobileEventPingBuilder(configuration));
@@ -260,7 +261,7 @@ public class TelemetryTest {
         final TelemetryPingSerializer serializer = new JSONPingSerializer();
         final FileTelemetryStorage storage = new FileTelemetryStorage(configuration, serializer);
 
-        final TelemetryClient client = spy(new HttpURLConnectionTelemetryClient());
+        final TelemetryClient client = spy(new TelemetryClient(new HttpUrlConnectionClient()));
         final TelemetryScheduler scheduler = new JobSchedulerTelemetryScheduler();
 
         final TelemetryEventPingBuilder pingBuilder = spy(new TelemetryEventPingBuilder(configuration));
@@ -342,7 +343,7 @@ public class TelemetryTest {
         final TelemetryPingSerializer serializer = new JSONPingSerializer();
         final FileTelemetryStorage storage = new FileTelemetryStorage(configuration, serializer);
 
-        final TelemetryClient client = spy(new HttpURLConnectionTelemetryClient());
+        final TelemetryClient client = spy(new TelemetryClient(new HttpUrlConnectionClient()));
         final TelemetryScheduler scheduler = new JobSchedulerTelemetryScheduler();
 
         final Telemetry telemetry = new Telemetry(configuration, storage, client, scheduler)

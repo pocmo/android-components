@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation project(':support-base')
+    implementation project(':concept-fetch')
 
     implementation Deps.support_annotations
 
@@ -33,6 +34,8 @@ dependencies {
     testImplementation Deps.testing_mockito
 
     testImplementation Deps.testing_mockwebserver
+
+    testImplementation project(':lib-fetch-httpurlconnection')
 }
 
 apply from: '../../../publish.gradle'
