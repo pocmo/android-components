@@ -11,18 +11,22 @@ import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 /**
- * The [Request] data class represents a resource request.
+ * The [Request] data class represents a resource request to be send by a [Client].
  *
  * It's API is inspired by the Request interface of the Web Fetch API:
  * https://developer.mozilla.org/en-US/docs/Web/API/Request
  *
- * @property url
- * @property method
- * @property headers
- * @property connectTimeout
- * @property readTimeout
- * @property body
- * @property redirect
+ * @property url The URL of the request.
+ * @property method The request method (GET, POST, ..)
+ * @property headers Optional HTTP headers to be send with the request.
+ * @property connectTimeout A timeout to be used when connecting to the resource.  If the timeout expires before the
+ * connection can be established, a java.net.SocketTimeoutException is raised. A timeout of zero is interpreted as an
+ * infinite timeout.
+ * @property readTimeout A timeout to be used when reading from the resource. If the timeout expires before there is
+ * data available for read, a java.net.SocketTimeoutException is raised. A timeout of zero is interpreted as an infinite
+ * timeout.
+ * @property body An optional body to be send with the request.
+ * @property redirect Whether the [Client] should follow redirects (HTTP 3xx) for this request or not.
  */
 data class Request(
     val url: String,
@@ -34,32 +38,35 @@ data class Request(
     val redirect: Redirect = Redirect.FOLLOW
 ) {
     /**
-     * TODO
+     * A [Body] to be send with the [Request].
+     *
+     * @param stream A stream that will be read and send to the resource.
      */
     class Body(
         private val stream: InputStream
     ) : Closeable {
         companion object {
             /**
-             * TODO
+             * Create a [Body] from the provided [String].
              */
             fun fromString(value: String): Body = Body(value.byteInputStream())
 
             /**
-             * TODO
+             * Create a [Body] from the provided [File].
              */
             fun fromFile(file: File): Body = Body(file.inputStream())
         }
 
         /**
-         * TODO
+         * Executes the given [block] function on the body's stream and then closes it down correctly whether an
+         * exception is thrown or not.
          */
         fun <R> useStream(block: (InputStream) -> R): R = use {
             block(stream)
         }
 
         /**
-         * TODO
+         * Closes this body and releases any system resources associated with it.
          */
         override fun close() {
             try {

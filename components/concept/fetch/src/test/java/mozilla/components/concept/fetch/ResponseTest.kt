@@ -9,8 +9,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.Mockito
+import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
+import java.io.IOException
+import java.io.InputStream
+import java.lang.RuntimeException
 
 class ResponseTest {
     @Test
@@ -42,9 +47,7 @@ class ResponseTest {
 
     @Test
     fun `Using InputStream from Body`() {
-        val stream = "Hello World".byteInputStream()
-
-        val body = spy(Response.Body(stream))
+        val body = spy(Response.Body("Hello World".byteInputStream()))
 
         var streamUsed = false
         body.useStream { stream ->
@@ -87,4 +90,119 @@ class ResponseTest {
         assertFalse(Response("https://www.mozilla.org", 500, headers = mock(), body = mock()).clientError)
         assertFalse(Response("https://www.mozilla.org", 302, headers = mock(), body = mock()).clientError)
     }
+
+    @Test
+    fun `Fully configured Response`() {
+        val response = Response(
+            url = "https://www.mozilla.org",
+            status = 200,
+            headers = MutableHeaders(
+                "Content-Type" to "text/html; charset=utf-8",
+                "Connection" to "Close",
+                "Expires" to "Thu, 08 Nov 2018 15:41:43 GMT"
+            ),
+            body = Response.Body("Hello World".byteInputStream())
+        )
+
+        assertEquals("https://www.mozilla.org", response.url)
+        assertEquals(200, response.status)
+        assertEquals("Hello World", response.body.string())
+
+        val headers = response.headers
+        assertEquals(3, headers.size)
+
+        assertEquals("Content-Type", headers[0].name)
+        assertEquals("Connection", headers[1].name)
+        assertEquals("Expires", headers[2].name)
+
+        assertEquals("text/html; charset=utf-8", headers[0].value)
+        assertEquals("Close", headers[1].value)
+        assertEquals("Thu, 08 Nov 2018 15:41:43 GMT", headers[2].value)
+    }
+
+    @Test
+    fun `Closing body closes stream of body`() {
+        val stream: InputStream = mock()
+        val response = Response("url", 200, MutableHeaders(), Response.Body(stream))
+
+        verify(stream, never()).close()
+
+        response.body.close()
+
+        verify(stream).close()
+    }
+
+
+    @Test
+    fun `Closing response closes stream of body`() {
+        val stream: InputStream = mock()
+        val response = Response("url", 200, MutableHeaders(), Response.Body(stream))
+
+        verify(stream, never()).close()
+
+        response.close()
+
+        verify(stream).close()
+    }
+
+    @Test
+    fun `Empty body`() {
+        val body = Response.Body.empty()
+        assertEquals("", body.string())
+    }
+
+    @Test
+    fun `Creating string closes stream`() {
+        val stream: InputStream = spy("".byteInputStream())
+        val body = Response.Body(stream)
+
+        verify(stream, never()).close()
+
+        body.string()
+
+        verify(stream).close()
+    }
+
+    @Test(expected = TestException::class)
+    fun `Using buffered reader closes stream`() {
+        val stream: InputStream = spy("".byteInputStream())
+        val body = Response.Body(stream)
+
+        verify(stream, never()).close()
+
+        try {
+            body.useBufferedReader {
+                throw TestException()
+            }
+        } finally {
+            verify(stream).close()
+        }
+    }
+
+    @Test(expected = TestException::class)
+    fun `Using stream closes stream`() {
+        val stream: InputStream = spy("".byteInputStream())
+        val body = Response.Body(stream)
+
+        verify(stream, never()).close()
+
+        try {
+            body.useStream {
+                throw TestException()
+            }
+        } finally {
+            verify(stream).close()
+        }
+    }
+
+    @Test
+    fun `Stream throwing on close`() {
+        val stream: InputStream = mock()
+        Mockito.doThrow(IOException()).`when`(stream).close()
+
+        val body = Response.Body(stream)
+        body.close()
+    }
 }
+
+private class TestException: RuntimeException()

@@ -4,34 +4,89 @@
 
 package mozilla.components.concept.fetch
 
+import java.lang.IllegalArgumentException
+
+/**
+ * A collection of HTTP [Headers] (immutable) of a [Request] or [Response].
+ */
 interface Headers : Iterable<Header> {
     /**
      * Returns the number of headers (key / value combinations).
      */
     val size: Int
 
+    /**
+     * Gets the [Header] at the specified [index].
+     */
     operator fun get(index: Int): Header
 
+    /**
+     * Sets the [Header] at the specified [index].
+     */
     operator fun set(index: Int, header: Header)
+
+    /**
+     * Returns true if a [Header] with the given [name] exists.
+     */
+    fun contains(name: String): Boolean
+
+    /**
+     * Returns the last value corresponding to the specified header field name, or null.
+     */
+    fun get(name: String): String?
 }
 
+/**
+ * Represents a [Header] containing of a [name] and [value].
+ */
 data class Header(
     val name: String,
     val value: String
-)
+) {
+    init {
+        if (name.isEmpty()) {
+            throw IllegalArgumentException("Header name cannot be empty")
+        }
+    }
+}
 
-class MutableHeaders : Headers {
+/**
+ * A collection of HTTP [Headers] (mutable) of a [Request] or [Response].
+ */
+class MutableHeaders(
+    vararg pairs: Pair<String, String>
+) : Headers, MutableIterable<Header> {
+    private val headers: MutableList<Header> = pairs.map {
+            (name, value) -> Header(name, value)
+    }.toMutableList()
+
+    /**
+     * Gets the [Header] at the specified [index].
+     */
     override fun get(index: Int): Header = headers[index]
 
+    /**
+     * Sets the [Header] at the specified [index].
+     */
     override fun set(index: Int, header: Header) {
         headers[index] = header
     }
 
-    override fun iterator(): Iterator<Header> = headers.iterator()
+    /**
+     * Returns an iterator over the headers that supports removing elements during iteration.
+     */
+    override fun iterator(): MutableIterator<Header> = headers.iterator()
 
-    private val headers: MutableList<Header> = mutableListOf()
+    /**
+     * Returns true if a [Header] with the given [name] exists.
+     */
+    override fun contains(name: String): Boolean = headers.firstOrNull { it.name == name } != null
 
-    override val size: Int = headers.size
+    /**
+     * Returns the number of headers (key / value combinations).
+     */
+    override val size: Int
+        get() = headers.size
 
     /**
      * Append a header without removing the headers already present.
@@ -54,4 +109,9 @@ class MutableHeaders : Headers {
 
         return append(name, value)
     }
+
+    /**
+     * Returns the last value corresponding to the specified header field name, or null.
+     */
+    override fun get(name: String): String? = headers.asReversed().firstOrNull { it.name == name }?.value
 }

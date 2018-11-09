@@ -2,12 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.lib.fetch.okhttp
+package mozilla.components.lib.fetch.httpurlconnection
 
 import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.Headers
+import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.Response
-import mozilla.components.concept.fetch.createBaseUserAgent
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -18,7 +19,7 @@ import java.util.zip.GZIPInputStream
 /**
  *
  */
-class HttpUrlConnectionClient : Client {
+class HttpUrlConnectionClient : Client() {
     @Throws(IOException::class)
     override fun fetch(request: Request): Response {
         var connection: HttpURLConnection? = null
@@ -60,21 +61,53 @@ class HttpUrlConnectionClient : Client {
         }
 
         return Response(
+            connection.url.toString(),
             connection.responseCode,
+            translateHeaders(connection),
             createBody(connection)
         )
     }
+}
+
+private fun translateHeaders(connection: HttpURLConnection): Headers {
+    val headers = MutableHeaders()
+
+    var index = 0
+
+    while (connection.getHeaderField(index) != null) {
+        val name = connection.getHeaderFieldKey(index)
+        if (name == null) {
+            index++
+            continue
+        }
+
+        val value = connection.getHeaderField(index)
+
+        headers.append(name, value)
+
+        index++
+    }
+
+    return headers
 }
 
 private fun createBody(connection: HttpURLConnection): Response.Body {
     val gzipped = connection.contentEncoding == "gzip"
 
     withFileNotFoundExceptionIgnored {
-        return HttpUrlConnectionBody(connection, connection.inputStream, gzipped)
+        return HttpUrlConnectionBody(
+            connection,
+            connection.inputStream,
+            gzipped
+        )
     }
 
     withFileNotFoundExceptionIgnored {
-        return HttpUrlConnectionBody(connection, connection.errorStream, gzipped)
+        return HttpUrlConnectionBody(
+            connection,
+            connection.errorStream,
+            gzipped
+        )
     }
 
     return EmptyBody()

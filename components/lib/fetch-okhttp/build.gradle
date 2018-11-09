@@ -32,8 +32,7 @@ dependencies {
     testImplementation Deps.testing_junit
     testImplementation Deps.testing_robolectric
     testImplementation Deps.testing_mockito
-
-    testImplementation project(':support-test')
+    testImplementation project(':tooling-fetch-tests')
 }
 
 apply from: '../../../publish.gradle'

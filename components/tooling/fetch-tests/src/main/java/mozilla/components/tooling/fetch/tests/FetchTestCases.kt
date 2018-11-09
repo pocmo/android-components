@@ -2,15 +2,35 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.support.test.fetch
+package mozilla.components.tooling.fetch.tests
+
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.MutableHeaders
+import mozilla.components.concept.fetch.Request
+import mozilla.components.concept.fetch.success
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okio.Buffer
+import okio.GzipSink
+import okio.Okio
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+import java.io.File
+import java.io.IOException
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketTimeoutException
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * Generic test cases for concept-fetch implementations.
  *
  * We expect any implementation of concept-fetch to pass all test cases here.
  */
-/*
-@Suppress("IllegalIdentifier", "FunctionName")
+@Suppress("IllegalIdentifier", "FunctionName", "unused")
 abstract class FetchTestCases {
     abstract fun createClient(): Client
 
@@ -67,7 +87,7 @@ abstract class FetchTestCases {
             val port =  url("/").port()
             assertEquals("$host:$port", request.getHeader("Host"))
 
-            assertEquals("*x*", request.getHeader("Accept"))
+            assertEquals("*/*", request.getHeader("Accept"))
 
             assertEquals("gzip", request.getHeader("Accept-Encoding"))
 
@@ -86,7 +106,7 @@ abstract class FetchTestCases {
             val response = client.fetch(Request(
                 url = rootUrl(),
                 headers = MutableHeaders()
-                    .set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*x*;q=0.8")
+                    .set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .set("Accept-Encoding", "gzip, deflate")
                     .set("Accept-Language", "en-US,en;q=0.5")
                     .set("Connection", "keep-alive")
@@ -105,7 +125,7 @@ abstract class FetchTestCases {
             assertTrue(names.contains("Connection"))
             assertTrue(names.contains("User-Agent"))
 
-            assertEquals("text/html,application/xhtml+xml,application/xml;q=0.9,*x*;q=0.8",
+            assertEquals("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 request.headers.get("Accept"))
 
             assertEquals("gzip, deflate",
@@ -247,6 +267,77 @@ abstract class FetchTestCases {
         }
     }
 
+    @Test
+    fun `PUT (201) file upload`() {
+        val file = File.createTempFile(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+        file.writer().use { it.write("I am an image file!") }
+
+        withServerResponding(
+            MockResponse()
+                .setResponseCode(201)
+                .setHeader("Location", "/your-image.png")
+                .setBody("Thank you!")
+        ) { client ->
+            val response = client.fetch(Request(
+                url = rootUrl(),
+                method = Request.Method.PUT,
+                headers = MutableHeaders(
+                    "Content-Type" to "image/png"
+                ),
+                body = Request.Body.fromFile(file)
+            ))
+
+            // Verify response
+
+            assertTrue(response.success)
+            assertEquals(201, response.status)
+
+            assertEquals("Thank you!", response.body.string())
+
+            assertTrue(response.headers.contains("Location"))
+
+            assertEquals("/your-image.png", response.headers.get("Location"))
+
+            // Verify request received by server
+
+            val request = takeRequest()
+
+            assertEquals("PUT", request.method)
+
+            assertEquals("image/png", request.getHeader("Content-Type"))
+
+            assertEquals("I am an image file!", request.body.readUtf8())
+        }
+    }
+
+    @Test
+    fun `GET (200) duplicated cache control response headers`() {
+        withServerResponding(
+            MockResponse()
+                .addHeader("Cache-Control", "no-cache")
+                .addHeader("Cache-Control", "no-store")
+                .setBody("I am the content")
+        ) { client ->
+            val response = client.fetch(Request(rootUrl()))
+
+            response.headers.forEach { (name, value) -> println("$name = $value") }
+
+            assertEquals(200, response.status)
+            assertEquals(3, response.headers.size)
+
+            assertEquals("Cache-Control", response.headers[0].name)
+            assertEquals("Cache-Control", response.headers[1].name)
+            assertEquals("Content-Length", response.headers[2].name)
+
+            assertEquals("no-cache", response.headers[0].value)
+            assertEquals("no-store", response.headers[1].value)
+            assertEquals("16", response.headers[2].value)
+
+            assertEquals("no-store", response.headers.get("Cache-Control"))
+            assertEquals("16", response.headers.get("Content-Length"))
+        }
+    }
+
     private inline fun withServerResponding(vararg responses: MockResponse, block: MockWebServer.(Client) -> Unit) {
         val server = MockWebServer()
 
@@ -273,4 +364,3 @@ private fun gzip(data: String): Buffer {
     sink.close()
     return result
 }
-*/

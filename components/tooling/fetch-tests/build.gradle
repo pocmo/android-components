@@ -28,8 +28,7 @@ android {
 }
 
 dependencies {
-    // Do not add any other modules/components with "implementation" scope here. We ignore support-test when generating
-    // coverage reports. Adding another module/component here causes the coverage reports of that module to report 0%.
+    implementation project(':concept-fetch')
 
     implementation Deps.kotlin_stdlib
 
@@ -37,11 +36,4 @@ dependencies {
     implementation Deps.testing_junit
     implementation Deps.testing_mockito
     implementation Deps.testing_robolectric
-
-    testImplementation Deps.support_compat
-    testImplementation project(':support-ktx')
 }
-
-apply from: '../../../publish.gradle'
-ext.configurePublish(Config.componentsGroupId, archivesBaseName, gradle.componentDescriptions[archivesBaseName])
-

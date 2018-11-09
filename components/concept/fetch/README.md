@@ -16,6 +16,84 @@ Use Gradle to download the library from [maven.mozilla.org](https://maven.mozill
 implementation "org.mozilla.components:concept-fetch:{latest-version}"
 ```
 
+### Performing requests
+
+#### Get a URL
+
+```Kotlin
+val request = Request(url)
+val response = client.fetch(request)
+val body = response.string()
+```
+
+A `Response` may hold references to other resources (e.g. streams). Therefore it's important to always close the `Response` object or its `Body`. This can be done by either consuming the content of the `Body` with one of the available methods or by using Kotlin's extension methods for using `Closeable` implementations (e.g. `use()`):
+
+```Kotlin
+client.fetch(Request(url)).use { response ->
+    val body = response.body.string()
+}
+```
+
+#### Post to a URL
+
+```Kotlin
+val request = Request(
+   url = "...",
+   method = Request.Method.POST,
+   body = Request.Body.fromStream(stream))
+   
+client.fetch(request).use { response ->
+   if (response.success) {
+       // ...
+   }
+}
+```
+
+#### Github API example
+
+```Kotlin
+val request = Request(
+   url = "https://api.github.com/repos/mozilla-mobile/android-components/issues",
+   headers = MutableHeaders(
+       "User-Agent" to "AwesomeBrowser/1.0",
+       "Accept" to "application/json; q=0.5",
+       "Accept" to "application/vnd.github.v3+json"))
+
+client.fetch(request).use { response ->
+    val server = response.headers.get('Server')
+    val result = response.body.string()
+}
+```
+
+#### Posting a file
+
+```Kotlin
+val file = File("README.md")
+
+val request = Request(
+   url = "https://api.github.com/markdown/raw",
+   headers = MutableHeaders(
+       "Content-Type", "text/x-markdown; charset=utf-8"
+   ),
+   body = Request.Body.fromFile(file))
+   
+client.fetch(request).use { response ->
+   if (request.success) {
+      // Upload was successful!
+   }
+}
+   
+```
+
+#### Asynchronous requests
+
+Client implementations are synchronous. For asynchronous requests it's recommended to wrap a client in a Coroutine with a scope the calling code is in control of:
+
+```Kotlin
+val deferredResponse = async { client.fetch(request) }
+val body = deferredResponse.await().body.string()
+```
+
 ## License
 
     This Source Code Form is subject to the terms of the Mozilla Public
