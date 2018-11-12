@@ -1,0 +1,47 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion Config.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion Config.minSdkVersion
+        targetSdkVersion Config.targetSdkVersion
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+        }
+    }
+
+    lintOptions {
+        lintConfig file("lint.xml")
+    }
+}
+
+dependencies {
+    // Do not add any other modules/components with "implementation" scope here. We ignore support-test when generating
+    // coverage reports. Adding another module/component here causes the coverage reports of that module to report 0%.
+
+    implementation Deps.kotlin_stdlib
+
+    implementation Deps.testing_mockwebserver
+    implementation Deps.testing_junit
+    implementation Deps.testing_mockito
+    implementation Deps.testing_robolectric
+
+    testImplementation Deps.support_compat
+    testImplementation project(':support-ktx')
+}
+
+apply from: '../../../publish.gradle'
+ext.configurePublish(Config.componentsGroupId, archivesBaseName, gradle.componentDescriptions[archivesBaseName])
+
