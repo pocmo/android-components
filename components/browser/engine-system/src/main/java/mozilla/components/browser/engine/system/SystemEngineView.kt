@@ -15,6 +15,7 @@ import android.os.Message
 import android.support.annotation.VisibleForTesting
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
 import android.webkit.JsPromptResult
@@ -98,7 +99,8 @@ class SystemEngineView @JvmOverloads constructor(
 
     override fun onDestroy() {
         session?.apply {
-            webView.destroy()
+            (webView.parent as? SystemEngineView)?.removeView(webView)
+
         }
     }
 

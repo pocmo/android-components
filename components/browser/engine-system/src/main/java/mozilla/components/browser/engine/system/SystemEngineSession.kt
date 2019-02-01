@@ -154,6 +154,12 @@ class SystemEngineSession(
         notifyObservers { onTrackerBlockingEnabledChange(false) }
     }
 
+    override fun close() {
+        super.close()
+
+        webView.destroy()
+    }
+
     /**
      * See [EngineSession.clearData]
      */
