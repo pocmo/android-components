@@ -82,6 +82,7 @@ object Dependencies {
     const val androidx_core_ktx = "androidx.core:core-ktx:${Versions.AndroidX.core}"
     const val androidx_fragment = "androidx.fragment:fragment:${Versions.AndroidX.fragment}"
     const val androidx_lifecycle_extensions = "androidx.lifecycle:lifecycle-extensions:${Versions.AndroidX.lifecycle}"
+    const val androidx_lifecycle_runtime = "androidx.lifecycle:lifecycle-runtime:${Versions.AndroidX.lifecycle}"
     const val androidx_lifecycle_compiler = "androidx.lifecycle:lifecycle-compiler:${Versions.AndroidX.lifecycle}"
     const val androidx_paging = "androidx.paging:paging-runtime:${Versions.AndroidX.paging}"
     const val androidx_palette = "androidx.palette:palette-ktx:${Versions.AndroidX.palette}"

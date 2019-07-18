@@ -5,15 +5,18 @@
 package org.mozilla.samples.browser
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import kotlinx.android.synthetic.main.fragment_browser.view.*
+import kotlinx.coroutines.launch
 import mozilla.components.feature.awesomebar.AwesomeBarFeature
 import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
 import mozilla.components.feature.session.ThumbnailsFeature
 import mozilla.components.feature.tabs.toolbar.TabsToolbarFeature
 import mozilla.components.feature.toolbar.ToolbarAutocompleteFeature
+import mozilla.components.lib.state.ext.observe
 import mozilla.components.support.base.feature.BackHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import org.mozilla.samples.browser.ext.components
@@ -66,6 +69,28 @@ class BrowserFragment : BaseBrowserFragment(), BackHandler {
         )
 
         return layout
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        components.store.observe(viewLifecycleOwner) {
+            Log.e("SKDBG", "Observe (attached=${view.isAttachedToWindow})")
+            Log.e("SKDBG", "-> ${viewLifecycleOwner.lifecycle.currentState}")
+
+            /*
+            viewLifecycleOwner.lifecycleScope.launch {
+
+            }
+             */
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        Log.e("SKDBG", "BrowserFragment.onResume()")
+        components.store.observe(viewLifecycleOwner) { state ->
+            Log.w("SKDBG", "State: $state")
+        }
     }
 
     private fun showTabs() {

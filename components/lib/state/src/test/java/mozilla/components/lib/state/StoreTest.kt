@@ -4,6 +4,8 @@
 
 package mozilla.components.lib.state
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import mozilla.components.support.test.ext.joinBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,7 +39,9 @@ class StoreTest {
 
         var observedValue = 0
 
-        store.observeManually { state -> observedValue = state.counter }
+        store.observeManually { state -> observedValue = state.counter }.also {
+            it.resume()
+        }
 
         store.dispatch(TestAction.IncrementAction).joinBlocking()
 
@@ -53,7 +57,9 @@ class StoreTest {
 
         var observedValue = 0
 
-        store.observeManually { state -> observedValue = state.counter }
+        store.observeManually { state -> observedValue = state.counter }.also {
+            it.resume()
+        }
 
         assertEquals(23, observedValue)
     }
@@ -67,7 +73,9 @@ class StoreTest {
 
         var stateChangeObserved = false
 
-        store.observeManually { stateChangeObserved = true }
+        store.observeManually { stateChangeObserved = true }.also {
+            it.resume()
+        }
 
         // Initial state observed
         assertTrue(stateChangeObserved)
@@ -80,18 +88,30 @@ class StoreTest {
 
     @Test
     fun `Observer does not get notified after unsubscribe`() {
+        println("Start")
+
         val store = Store(
             TestState(counter = 23),
             ::reducer
         )
 
+        println("Store")
+
         var observedValue = 0
 
-        val subscription = store.observeManually { state ->
+        // val scope = CoroutineScope(Dispatchers.IO)
+
+        val subscription = store.observeManually() { state ->
             observedValue = state.counter
+        }.also {
+            it.resume()
         }
 
-        store.dispatch(TestAction.IncrementAction).joinBlocking()
+        println("Subscribed")
+
+        store.dispatch(TestAction.IncrementAction).joinBlocking() // thread blocked
+
+        println("Dispatched...")
 
         assertEquals(24, observedValue)
 
@@ -99,7 +119,11 @@ class StoreTest {
 
         assertEquals(23, observedValue)
 
+        println("unsubscribe")
+
         subscription.unsubscribe()
+
+        println("done")
 
         store.dispatch(TestAction.DecrementAction).joinBlocking()
 

@@ -9,9 +9,14 @@ import android.os.Looper
 import androidx.annotation.CheckResult
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 
@@ -74,18 +79,20 @@ open class Store<S : State, A : Action>(
      * [Subscription.unsubscribe] to stop observing and avoid potentially leaking memory by keeping an unused [Observer]
      * registered. It's is recommend to use one of the `observe` extension methods that unsubscribe automatically.
      *
+     * TODO: Mention resume
+     *
      * @return A [Subscription] object that can be used to unsubscribe from further state changes.
      */
     @CheckResult(suggest = "observe")
     @Synchronized
-    fun observeManually(observer: Observer<S>): Subscription<S, A> {
-        val subscription = Subscription(observer, store = this)
+    fun observeManually(scope: CoroutineScope = this.scope, observer: Observer<S>): Subscription<S, A> {
+        val subscription = Subscription(observer, store = this, scope = scope)
 
         synchronized(subscriptions) {
             subscriptions.add(subscription)
         }
 
-        observer.invoke(currentState)
+        // observer.invoke(currentState)
 
         return subscription
     }
@@ -109,7 +116,11 @@ open class Store<S : State, A : Action>(
         currentState = newState
 
         synchronized(subscriptions) {
-            subscriptions.forEach { it.observer.invoke(currentState) }
+            runBlocking {
+                println(Thread.currentThread().name)
+
+                subscriptions.forEach { subscription -> subscription.dispatch(newState) }
+            }
         }
     }
 
@@ -125,10 +136,42 @@ open class Store<S : State, A : Action>(
      */
     class Subscription<S : State, A : Action> internal constructor(
         internal val observer: Observer<S>,
-        store: Store<S, A>
+        store: Store<S, A>,
+        internal val scope: CoroutineScope
     ) {
         private val storeReference = WeakReference(store)
         internal var binding: Binding? = null
+        @Volatile internal var active = false
+
+        fun resume() {
+            active = true
+
+            // storeReference.get()?.let { store -> observer.invoke(store.state) }
+            storeReference.get()?.let { store ->
+                runBlocking { dispatch(store.state) }
+            }
+        }
+
+        internal suspend fun dispatch(state: S) {
+            // With scope gone.
+
+            println("Dispatching: " + scope.isActive)
+            println("  Context:" + scope.coroutineContext.isActive)
+
+            withContext(scope.coroutineContext) {
+                println("From context")
+
+                // This should not run.
+
+                if (active) {
+                    observer.invoke(state)
+                }
+            }
+        }
+
+        fun pause() {
+            active = false
+        }
 
         fun unsubscribe() {
             storeReference.get()?.removeSubscription(this)
