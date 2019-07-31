@@ -42,7 +42,7 @@ import mozilla.components.ui.autocomplete.OnFilterListener
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
 
-private const val AUTOCOMPLETE_QUERY_THREADS = 3
+private const val AUTOCOMPLETE_QUERY_THREADS = 10
 
 /**
  * A customizable toolbar for browsers.
