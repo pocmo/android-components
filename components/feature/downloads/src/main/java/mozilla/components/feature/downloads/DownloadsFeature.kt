@@ -8,49 +8,57 @@ import android.Manifest.permission.INTERNET
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.content.Context
-import android.support.v4.app.FragmentManager
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.PRIVATE
+import androidx.fragment.app.FragmentManager
 import mozilla.components.browser.session.Download
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.browser.session.runWithSessionIdOrSelected
 import mozilla.components.feature.downloads.DownloadDialogFragment.Companion.FRAGMENT_TAG
 import mozilla.components.support.base.feature.LifecycleAwareFeature
+import mozilla.components.support.base.observer.Consumable
 import mozilla.components.support.ktx.android.content.isPermissionGranted
 
-typealias OnNeedToRequestPermissions = (session: Session, download: Download) -> Unit
+typealias OnNeedToRequestPermissions = (permissions: Array<String>) -> Unit
 
 /**
- * Feature implementation for proving download functionality for the selected session.
- * It will subscribe to the selected session and will listening for downloads.
+ * Feature implementation to provide download functionality for the selected
+ * session. The feature will subscribe to the selected session and listen
+ * for downloads.
  *
- * @property applicationContext a reference to [Context] applicationContext.
- * @property onNeedToRequestPermissions it will be call when you need to request permission,
- * before a download can be performed.
- * @property onDownloadCompleted a callback to be notified when a download is completed.
- * @property downloadManager a reference of [DownloadManager] who is in charge of performing the downloads.
- * @property sessionManager a reference of [SessionManager].
- * @property fragmentManager a reference of [FragmentManager]. If you provide a [fragmentManager]
- * a dialog will show before every download.
- * @property fragmentManager a reference of [FragmentManager].
- * @property dialog a reference of [DownloadDialogFragment]. If it is not provided, it will be
- * initialized with an instance of [SimpleDownloadDialogFragment].
+ * @property applicationContext a reference to the application context.
+ * @property onNeedToRequestPermissions a callback invoked when permissions
+ * need to be requested before a download can be performed. Once the request
+ * is completed, [onPermissionsResult] needs to be invoked.
+ * @property onDownloadCompleted a callback invoked when a download is completed.
+ * @property downloadManager a reference to the [DownloadManager] which is
+ * responsible for performing the downloads.
+ * @property sessionManager a reference to the application's [SessionManager].
+ * @property fragmentManager a reference to a [FragmentManager]. If a fragment
+ * manager is provided, a dialog will be shown before every download.
+ * @property dialog a reference to a [DownloadDialogFragment]. If not provided, an
+ * instance of [SimpleDownloadDialogFragment] will be used.
  */
 class DownloadsFeature(
     private val applicationContext: Context,
-    var onNeedToRequestPermissions: OnNeedToRequestPermissions = { _, _ -> },
+    var onNeedToRequestPermissions: OnNeedToRequestPermissions = { },
     var onDownloadCompleted: OnDownloadCompleted = { _, _ -> },
     private val downloadManager: DownloadManager = DownloadManager(applicationContext, onDownloadCompleted),
     private val sessionManager: SessionManager,
+    private val sessionId: String? = null,
     private val fragmentManager: FragmentManager? = null,
-    private var dialog: DownloadDialogFragment = SimpleDownloadDialogFragment.newInstance()
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal var dialog: DownloadDialogFragment = SimpleDownloadDialogFragment.newInstance()
 ) : SelectionAwareSessionObserver(sessionManager), LifecycleAwareFeature {
 
     /**
-     * Starts observing any download on the selected session and send it to the [DownloadManager]
+     * Starts observing downloads on the selected session and sends them to the [DownloadManager]
      * to be processed.
      */
     override fun start() {
-        super.observeSelected()
+        observeIdOrSelected(sessionId)
 
         findPreviousDialogFragment()?.let {
             reAttachOnStartDownloadListener(it)
@@ -58,7 +66,7 @@ class DownloadsFeature(
     }
 
     /**
-     * Stops observing any download on the selected session.
+     * Stops observing downloads on the selected session.
      */
     override fun stop() {
         super.stop()
@@ -66,13 +74,11 @@ class DownloadsFeature(
     }
 
     /**
-     * Notifies to the [DownloadManager] that a new download must be processed.
+     * Notifies the [DownloadManager] that a new download must be processed.
      */
     @SuppressLint("MissingPermission")
     override fun onDownload(session: Session, download: Download): Boolean {
-
         return if (applicationContext.isPermissionGranted(INTERNET, WRITE_EXTERNAL_STORAGE)) {
-
             if (fragmentManager != null) {
                 showDialog(download, session)
                 false
@@ -81,20 +87,24 @@ class DownloadsFeature(
                 true
             }
         } else {
-            onNeedToRequestPermissions(session, download)
+            onNeedToRequestPermissions(arrayOf(INTERNET, WRITE_EXTERNAL_STORAGE))
             false
         }
     }
 
     /**
-     * Call this method to notify the feature download that the permissions where granted.
-     * If so it will automatically trigger the pending download.
+     * Notifies the feature that the permissions request was completed. It will then
+     * either trigger or clear the pending download.
      */
-    fun onPermissionsGranted() {
-        activeSession?.let { session ->
-            session.download.consume {
-                onDownload(session, it)
+    fun onPermissionsResult(permissions: Array<String>, grantResults: IntArray) {
+        if (applicationContext.isPermissionGranted(INTERNET, WRITE_EXTERNAL_STORAGE)) {
+            activeSession?.let { session ->
+                session.download.consume {
+                    onDownload(session, it)
+                }
             }
+        } else {
+            activeSession?.download = Consumable.empty()
         }
     }
 
@@ -119,10 +129,11 @@ class DownloadsFeature(
     private fun reAttachOnStartDownloadListener(previousDialog: DownloadDialogFragment?) {
         previousDialog?.apply {
             this@DownloadsFeature.dialog = this
-            val selectedSession = sessionManager.selectedSession
-            selectedSession?.download?.consume {
-                onDownload(selectedSession, it)
-                false
+            sessionManager.runWithSessionIdOrSelected(sessionId) { session ->
+                session.download.consume {
+                    onDownload(session, it)
+                    false
+                }
             }
         }
     }

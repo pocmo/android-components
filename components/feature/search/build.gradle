@@ -22,13 +22,14 @@ android {
 }
 
 dependencies {
-    implementation project(':browser-search')
+    api project(':browser-search')
     implementation project(':browser-session')
     implementation project(':concept-engine')
 
     implementation Dependencies.kotlin_stdlib
 
     testImplementation project(':support-test')
+    testImplementation Dependencies.androidx_test_core
     testImplementation Dependencies.testing_junit
     testImplementation Dependencies.testing_robolectric
     testImplementation Dependencies.testing_mockito

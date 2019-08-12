@@ -10,7 +10,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import android.support.v4.view.ViewCompat
+import androidx.core.view.ViewCompat
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AnimationUtils
@@ -20,6 +20,8 @@ import android.widget.ProgressBar
 /**
  * An animated progress bar following the Photon Design System.
  */
+@Deprecated(
+    "The ui-progress component is deprecated. Using this progress bar affects site loading performance.")
 open class AnimatedProgressBar @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,

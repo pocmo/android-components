@@ -4,36 +4,52 @@
 
 package mozilla.components.service.glean
 
-import android.arch.lifecycle.Lifecycle
-import android.arch.lifecycle.LifecycleOwner
-import android.arch.lifecycle.LifecycleRegistry
 import android.content.Context
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.testing.WorkManagerTestInitHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import mozilla.components.service.glean.net.HttpPingUploader
-import mozilla.components.service.glean.storages.EventsStorageEngine
-import mozilla.components.service.glean.storages.ExperimentsStorageEngine
+import kotlinx.coroutines.runBlocking
+import mozilla.components.service.glean.GleanMetrics.GleanInternalMetrics
+import mozilla.components.service.glean.config.Configuration
+import mozilla.components.service.glean.firstrun.FileFirstRunDetector
+import mozilla.components.service.glean.private.DatetimeMetricType
+import mozilla.components.service.glean.private.EventMetricType
+import mozilla.components.service.glean.private.Lifetime
+import mozilla.components.service.glean.private.NoExtraKeys
+import mozilla.components.service.glean.private.PingType
+import mozilla.components.service.glean.private.StringMetricType
+import mozilla.components.service.glean.private.TimeUnit as GleanTimeUnit
+import mozilla.components.service.glean.private.UuidMetricType
 import mozilla.components.service.glean.storages.StringsStorageEngine
 import mozilla.components.service.glean.scheduler.GleanLifecycleObserver
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mozilla.components.service.glean.scheduler.PingUploadWorker
+import mozilla.components.service.glean.storages.StorageEngineManager
+import mozilla.components.service.glean.utils.getLanguageFromLocale
+import mozilla.components.service.glean.utils.getLocaleTag
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.anyString
-import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.robolectric.RobolectricTestRunner
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -42,23 +58,21 @@ import java.util.concurrent.TimeUnit
 @RunWith(RobolectricTestRunner::class)
 class GleanTest {
 
-    @get:Rule
-    val fakeDispatchers = FakeDispatchersInTest()
-
     @Before
     fun setup() {
-        Glean.initialized = false
-        Glean.initialize(ApplicationProvider.getApplicationContext())
+        WorkManagerTestInitHelper.initializeTestWorkManager(
+            ApplicationProvider.getApplicationContext())
+
+        resetGlean()
     }
 
     @After
     fun resetGlobalState() {
-        Glean.setMetricsEnabled(true)
-        Glean.clearExperiments()
+        Glean.setUploadEnabled(true)
     }
 
     @Test
-    fun `disabling metrics should record nothing`() {
+    fun `disabling upload should disable metrics recording`() {
         val stringMetric = StringMetricType(
                 disabled = false,
                 category = "telemetry",
@@ -66,41 +80,13 @@ class GleanTest {
                 name = "string_metric",
                 sendInPings = listOf("store1")
         )
-        StringsStorageEngine.clearAllStores()
-        Glean.setMetricsEnabled(false)
-        assertEquals(false, Glean.getMetricsEnabled())
+        Glean.setUploadEnabled(false)
+        assertEquals(false, Glean.getUploadEnabled())
         stringMetric.set("foo")
         assertNull(
-                "Metrics should not be recorded if glean is disabled",
+                "Metrics should not be recorded if Glean is disabled",
                 StringsStorageEngine.getSnapshot(storeName = "store1", clearStore = false)
         )
-    }
-
-    @Test
-    fun `disabling event metrics should record only when enabled`() {
-        val eventMetric = EventMetricType(
-                disabled = false,
-                category = "ui",
-                lifetime = Lifetime.Ping,
-                name = "event_metric",
-                sendInPings = listOf("store1"),
-                objects = listOf("buttonA")
-        )
-        EventsStorageEngine.clearAllStores()
-        Glean.setMetricsEnabled(true)
-        assertEquals(true, Glean.getMetricsEnabled())
-        eventMetric.record("buttonA", "event1")
-        val snapshot1 = EventsStorageEngine.getSnapshot(storeName = "store1", clearStore = false)
-        assertEquals(1, snapshot1!!.size)
-        Glean.setMetricsEnabled(false)
-        assertEquals(false, Glean.getMetricsEnabled())
-        eventMetric.record("buttonA", "event2")
-        val snapshot2 = EventsStorageEngine.getSnapshot(storeName = "store1", clearStore = false)
-        assertEquals(1, snapshot2!!.size)
-        Glean.setMetricsEnabled(true)
-        eventMetric.record("buttonA", "event3")
-        val snapshot3 = EventsStorageEngine.getSnapshot(storeName = "store1", clearStore = false)
-        assertEquals(2, snapshot3!!.size)
     }
 
     @Test
@@ -114,86 +100,44 @@ class GleanTest {
     }
 
     @Test
-    fun `test sending of default pings`() {
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("OK"))
-
-        StringsStorageEngine.clearAllStores()
-        ExperimentsStorageEngine.clearAllStores()
-        val stringMetric = StringMetricType(
-            disabled = false,
-            category = "telemetry",
-            lifetime = Lifetime.Application,
-            name = "string_metric",
-            sendInPings = listOf("default")
+    fun `test experiments recording`() {
+        Glean.setExperimentActive(
+            "experiment_test", "branch_a"
         )
-
-        val realClient = Glean.httpPingUploader
-        val testConfig = Glean.configuration.copy(
-            serverEndpoint = "http://" + server.hostName + ":" + server.port,
-            logPings = true
+        Glean.setExperimentActive(
+            "experiment_api", "branch_b",
+            mapOf("test_key" to "value")
         )
-        Glean.httpPingUploader = HttpPingUploader(testConfig)
+        assertTrue(Glean.testIsExperimentActive("experiment_api"))
+        assertTrue(Glean.testIsExperimentActive("experiment_test"))
 
-        try {
-            stringMetric.set("foo")
+        Glean.setExperimentInactive("experiment_test")
 
-            Glean.setExperimentActive(
-                "experiment1", "branch_a"
-            )
-            Glean.setExperimentActive(
-                "experiment2", "branch_b",
-                    mapOf("key" to "value")
-            )
-            Glean.setExperimentInactive("experiment1")
+        assertTrue(Glean.testIsExperimentActive("experiment_api"))
+        assertFalse(Glean.testIsExperimentActive("experiment_test"))
 
-            Glean.handleEvent(Glean.PingEvent.Default)
-
-            val request = server.takeRequest()
-            assertEquals("POST", request.method)
-            val metricsJsonData = request.body.readUtf8()
-            val metricsJson = JSONObject(metricsJsonData)
-            checkPingSchema(metricsJson)
-            assertEquals(
-                "foo",
-                metricsJson.getJSONObject("metrics")
-                    .getJSONObject("string")
-                    .getString("telemetry.string_metric")
-            )
-            assertNull(metricsJson.opt("events"))
-            assertNotNull(metricsJson.opt("ping_info"))
-            assertNotNull(metricsJson.getJSONObject("ping_info").opt("experiments"))
-            val applicationId = "mozilla-components-service-glean"
-            assert(
-                request.path.startsWith("/submit/$applicationId/metrics/${Glean.SCHEMA_VERSION}/")
-            )
-        } finally {
-            Glean.httpPingUploader = realClient
-            server.shutdown()
-        }
+        val storedData = Glean.testGetExperimentData("experiment_api")
+        assertEquals("branch_b", storedData.branch)
+        assertEquals(1, storedData.extra?.size)
+        assertEquals("value", storedData.extra?.getValue("test_key"))
     }
 
     @Test
     fun `test sending of background pings`() {
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("OK"))
+        val server = getMockWebServer()
 
-        EventsStorageEngine.clearAllStores()
-        val click = EventMetricType(
+        val click = EventMetricType<NoExtraKeys>(
             disabled = false,
             category = "ui",
             lifetime = Lifetime.Ping,
             name = "click",
-            sendInPings = listOf("default"),
-            objects = listOf("buttonA")
+            sendInPings = listOf("events")
         )
 
-        val realClient = Glean.httpPingUploader
-        val testConfig = Glean.configuration.copy(
+        resetGlean(getContextWithMockedInfo(), Glean.configuration.copy(
             serverEndpoint = "http://" + server.hostName + ":" + server.port,
             logPings = true
-        )
-        Glean.httpPingUploader = HttpPingUploader(testConfig)
+        ))
 
         // Fake calling the lifecycle observer.
         val lifecycleRegistry = LifecycleRegistry(mock(LifecycleOwner::class.java))
@@ -203,43 +147,39 @@ class GleanTest {
         try {
             // Simulate the first foreground event after the application starts.
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-            click.record("buttonA")
+            click.record()
 
             // Simulate going to background.
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
 
+            // Trigger worker task to upload the pings in the background
+            triggerWorkManager()
+
             val requests: MutableMap<String, String> = mutableMapOf()
             for (i in 0..1) {
-                val request = server.takeRequest()
+                val request = server.takeRequest(20L, TimeUnit.SECONDS)
                 val docType = request.path.split("/")[3]
                 requests.set(docType, request.body.readUtf8())
             }
 
             val eventsJson = JSONObject(requests["events"])
             checkPingSchema(eventsJson)
+            assertEquals("events", eventsJson.getJSONObject("ping_info")["ping_type"])
             assertEquals(1, eventsJson.getJSONArray("events")!!.length())
 
             val baselineJson = JSONObject(requests["baseline"])
+            assertEquals("baseline", baselineJson.getJSONObject("ping_info")["ping_type"])
             checkPingSchema(baselineJson)
 
-            val expectedBaselineStringMetrics = arrayOf(
-                "baseline.os",
-                "baseline.os_version",
-                "baseline.device",
-                "baseline.architecture"
-            )
             val baselineMetricsObject = baselineJson.getJSONObject("metrics")!!
             val baselineStringMetrics = baselineMetricsObject.getJSONObject("string")!!
-            assertEquals(expectedBaselineStringMetrics.size, baselineStringMetrics.length())
-            for (metric in expectedBaselineStringMetrics) {
-                assertNotNull(baselineStringMetrics.get(metric))
-            }
+            assertEquals(1, baselineStringMetrics.length())
+            assertNotNull(baselineStringMetrics.get("glean.baseline.locale"))
 
             val baselineTimespanMetrics = baselineMetricsObject.getJSONObject("timespan")!!
             assertEquals(1, baselineTimespanMetrics.length())
-            assertNotNull(baselineTimespanMetrics.get("baseline.duration"))
+            assertNotNull(baselineTimespanMetrics.get("glean.baseline.duration"))
         } finally {
-            Glean.httpPingUploader = realClient
             server.shutdown()
             lifecycleRegistry.removeObserver(gleanLifecycleObserver)
         }
@@ -257,10 +197,7 @@ class GleanTest {
         // Create a file in its place.
         assertTrue(gleanDir.createNewFile())
 
-        Glean.initialized = false
-
-        // Try to init Glean: it should not crash.
-        Glean.initialize(applicationContext = ApplicationProvider.getApplicationContext())
+        resetGlean()
 
         // Clean up after this, so that other tests don't fail.
         assertTrue(gleanDir.delete())
@@ -275,98 +212,71 @@ class GleanTest {
             name = "string_metric",
             sendInPings = listOf("store1")
         )
-        StringsStorageEngine.clearAllStores()
         Glean.initialized = false
         stringMetric.set("foo")
         assertNull(
-            "Metrics should not be recorded if glean is not initialized",
+            "Metrics should not be recorded if Glean is not initialized",
             StringsStorageEngine.getSnapshot(storeName = "store1", clearStore = false)
         )
 
         Glean.initialized = true
     }
 
-    @Test(expected = IllegalStateException::class)
-    fun `Don't initialize twice`() {
-        Glean.initialize(applicationContext = ApplicationProvider.getApplicationContext())
+    @Test
+    fun `Initializing twice is a no-op`() {
+        val beforeConfig = Glean.configuration
+
+        Glean.initialize(ApplicationProvider.getApplicationContext())
+
+        val afterConfig = Glean.configuration
+
+        assertSame(beforeConfig, afterConfig)
     }
 
     @Test
     fun `Don't handle events when uninitialized`() {
         val gleanSpy = spy<GleanInternalAPI>(GleanInternalAPI::class.java)
 
-        doThrow(IllegalStateException("Shouldn't send ping")).`when`(gleanSpy).sendPing(anyString(), anyString())
         gleanSpy.initialized = false
-        gleanSpy.handleEvent(Glean.PingEvent.Default)
+        runBlocking {
+            gleanSpy.handleBackgroundEvent()
+        }
+        assertFalse(isWorkScheduled(PingUploadWorker.PING_WORKER_TAG))
     }
 
     @Test
-    fun `Don't send pings if metrics disabled`() {
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("OK"))
+    fun `Don't schedule pings if metrics disabled`() {
+        Glean.setUploadEnabled(false)
 
-        EventsStorageEngine.clearAllStores()
+        runBlocking {
+            Glean.handleBackgroundEvent()
+        }
+        assertFalse(isWorkScheduled(PingUploadWorker.PING_WORKER_TAG))
+    }
 
-        val realClient = Glean.httpPingUploader
-        val testConfig = Glean.configuration.copy(
-            serverEndpoint = "http://" + server.hostName + ":" + server.port
-        )
-        Glean.httpPingUploader = HttpPingUploader(testConfig)
-        Glean.setMetricsEnabled(false)
+    @Test
+    fun `Don't schedule pings if there is no ping content`() {
+        resetGlean(getContextWithMockedInfo())
 
-        try {
-            Glean.handleEvent(Glean.PingEvent.Background)
+        runBlocking {
+            Glean.handleBackgroundEvent()
+        }
 
-            // Note: this only works because we are faking the dispatchers with the @Rule above,
-            // otherwise this would probably fail due to some async weirdness
-            val request = server.takeRequest(2, TimeUnit.SECONDS)
+        // We should only have a baseline ping and no events or metrics pings since nothing was
+        // recorded
+        val files = Glean.pingStorageEngine.storageDirectory.listFiles()
 
-            // request will be null if no pings were sent
-            assertNull(request)
-        } finally {
-            Glean.httpPingUploader = realClient
-            server.shutdown()
+        // Make sure only the baseline ping is present and no events or metrics pings
+        assertEquals(1, files.count())
+        val file = files.first()
+        BufferedReader(FileReader(file)).use {
+            val lines = it.readLines()
+            assert(lines[0].contains("baseline"))
         }
     }
 
     @Test
-    fun `Don't send pings if there is no ping content`() {
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("OK"))
-
-        EventsStorageEngine.clearAllStores()
-
-        val realClient = Glean.httpPingUploader
-        val testConfig = Glean.configuration.copy(
-            serverEndpoint = "http://" + server.hostName + ":" + server.port
-        )
-        Glean.httpPingUploader = HttpPingUploader(testConfig)
-
-        try {
-            Glean.handleEvent(Glean.PingEvent.Background)
-
-            val requests: MutableMap<String, String> = mutableMapOf()
-            for (i in 0..1) {
-                server.takeRequest(2, TimeUnit.SECONDS)?.let { request ->
-                    val docType = request.path.split("/")[3]
-                    requests[docType] = request.body.readUtf8()
-                }
-            }
-
-            // Make sure the baseline ping is there
-            val baselineJson = JSONObject(requests["baseline"])
-            checkPingSchema(baselineJson)
-
-            // Make sure the events ping is NOT there since no events should have been recorded
-            assertNull("Events request should be null since there was no event data", requests["events"])
-        } finally {
-            Glean.httpPingUploader = realClient
-            server.shutdown()
-        }
-    }
-
-    @Test
-    fun `Application id sanitazer must correctly filter undesired characters`() {
+    fun `Application id sanitizer must correctly filter undesired characters`() {
         assertEquals(
             "org-mozilla-test-app",
             Glean.sanitizeApplicationId("org.mozilla.test-app")
@@ -381,5 +291,226 @@ class GleanTest {
             "org-mozilla-test-app",
             Glean.sanitizeApplicationId("org-mozilla-test-app")
         )
+    }
+
+    @Test
+    fun `The appChannel must be correctly set, if requested`() {
+        // No appChannel must be set if nothing was provided through the config
+        // options.
+        resetGlean(getContextWithMockedInfo(), Configuration())
+        assertFalse(GleanInternalMetrics.appChannel.testHasValue())
+
+        // The appChannel must be correctly reported if a channel value
+        // was provided.
+        val testChannelName = "my-test-channel"
+        resetGlean(getContextWithMockedInfo(), Configuration(channel = testChannelName))
+        assertTrue(GleanInternalMetrics.appChannel.testHasValue())
+        assertEquals(testChannelName, GleanInternalMetrics.appChannel.testGetValue())
+    }
+
+    @Test
+    fun `client_id and first_run_date metrics should be copied from the old location`() {
+        // 1539480 BACKWARD COMPATIBILITY HACK
+
+        // The resetGlean called right before this function will add client_id
+        // and first_run_date to the new location in glean_client_info.  We
+        // need to clear those out again so we can test what happens when they
+        // are missing.
+        StorageEngineManager(
+            applicationContext = ApplicationProvider.getApplicationContext()
+        ).clearAllStores()
+
+        val clientIdMetric = UuidMetricType(
+            disabled = false,
+            category = "",
+            name = "client_id",
+            lifetime = Lifetime.User,
+            sendInPings = listOf("glean_ping_info")
+        )
+        val clientIdValue = clientIdMetric.generateAndSet()
+
+        val firstRunDateMetric = DatetimeMetricType(
+            disabled = false,
+            category = "",
+            name = "first_run_date",
+            lifetime = Lifetime.User,
+            sendInPings = listOf("glean_ping_info"),
+            timeUnit = GleanTimeUnit.Day
+        )
+        firstRunDateMetric.set()
+
+        assertFalse(GleanInternalMetrics.clientId.testHasValue())
+        assertFalse(GleanInternalMetrics.firstRunDate.testHasValue())
+
+        // This should copy the values to their new locations
+        Glean.initialized = false
+        Glean.initialize(ApplicationProvider.getApplicationContext())
+
+        assertEquals(clientIdValue, GleanInternalMetrics.clientId.testGetValue())
+        assertTrue(GleanInternalMetrics.firstRunDate.testHasValue())
+    }
+
+    @Test
+    fun `client_id and first_run_date metrics should not override new location`() {
+        // 1539480 BACKWARD COMPATIBILITY HACK
+
+        // The resetGlean called right before this function will add client_id
+        // and first_run_date to the new location in glean_client_info.
+        // In this case we want to keep those and confirm that any old values
+        // won't override the new ones.
+
+        val clientIdMetric = UuidMetricType(
+            disabled = false,
+            category = "",
+            name = "client_id",
+            lifetime = Lifetime.User,
+            sendInPings = listOf("glean_ping_info")
+        )
+        val clientIdValue = clientIdMetric.generateAndSet()
+
+        val firstRunDateMetric = DatetimeMetricType(
+            disabled = false,
+            category = "",
+            name = "first_run_date",
+            lifetime = Lifetime.User,
+            sendInPings = listOf("glean_ping_info"),
+            timeUnit = GleanTimeUnit.Day
+        )
+        firstRunDateMetric.set(Date(2200, 1, 1))
+
+        assertTrue(GleanInternalMetrics.clientId.testHasValue())
+        assertTrue(GleanInternalMetrics.firstRunDate.testHasValue())
+
+        // This should copy the values to their new locations
+        Glean.initialized = false
+        Glean.initialize(ApplicationProvider.getApplicationContext())
+
+        assertNotEquals(clientIdValue, GleanInternalMetrics.clientId.testGetValue())
+        assertNotEquals(firstRunDateMetric.testGetValue(), GleanInternalMetrics.firstRunDate.testGetValue())
+    }
+
+    @Test
+    fun `client_id and first_run_date must be generated if not available after the first start`() {
+        // 1539480 BACKWARD COMPATIBILITY HACK
+
+        // The resetGlean called right before this function will add client_id
+        // and first_run_date to the new location in glean_client_info.  We
+        // need to clear those out again so we can test what happens when they
+        // are missing.
+        StorageEngineManager(
+            applicationContext = ApplicationProvider.getApplicationContext()
+        ).clearAllStores()
+
+        assertFalse(GleanInternalMetrics.clientId.testHasValue())
+        assertFalse(GleanInternalMetrics.firstRunDate.testHasValue())
+
+        // Set this to be a non-first start with missing clientId/firstRunDate.
+        val gleanDataDir =
+            File(ApplicationProvider.getApplicationContext<Context>().applicationInfo.dataDir, Glean.GLEAN_DATA_DIR)
+        val firstRunDetector = FileFirstRunDetector(gleanDataDir)
+        firstRunDetector.createFirstRunFile()
+
+        // This should copy the values to their new locations
+        Glean.initialized = false
+        Glean.initialize(ApplicationProvider.getApplicationContext())
+
+        assertTrue(GleanInternalMetrics.clientId.testHasValue())
+        assertTrue(GleanInternalMetrics.firstRunDate.testHasValue())
+    }
+
+    @Test
+    fun `getLanguageTag() reports the tag for the default locale`() {
+        val defaultLanguageTag = getLocaleTag()
+
+        assertNotNull(defaultLanguageTag)
+        assertFalse(defaultLanguageTag.isEmpty())
+        assertEquals("en-US", defaultLanguageTag)
+    }
+
+    @Test
+    fun `getLanguageTag reports the correct tag for a non-default language`() {
+        val defaultLocale = Locale.getDefault()
+
+        try {
+            Locale.setDefault(Locale("fy", "NL"))
+
+            val languageTag = getLocaleTag()
+
+            assertNotNull(languageTag)
+            assertFalse(languageTag.isEmpty())
+            assertEquals("fy-NL", languageTag)
+        } finally {
+            Locale.setDefault(defaultLocale)
+        }
+    }
+
+    @Test
+    fun `getLanguage reports the modern translation for some languages`() {
+        assertEquals("he", getLanguageFromLocale(Locale("iw", "IL")))
+        assertEquals("id", getLanguageFromLocale(Locale("in", "ID")))
+        assertEquals("yi", getLanguageFromLocale(Locale("ji", "ID")))
+    }
+
+    @Test
+    fun `ping collection must happen after currently scheduled metrics recordings`() {
+        // Given the following block of code:
+        //
+        // Metric.A.set("SomeTestValue")
+        // Glean.sendPings(listOf("custom-ping-1"))
+        //
+        // This test ensures that "custom-ping-1" contains "metric.a" with a value of "SomeTestValue"
+        // when the ping is collected.
+
+        val server = getMockWebServer()
+
+        val pingName = "custom_ping_1"
+        val ping = PingType(
+            name = pingName,
+            includeClientId = true
+        )
+        val stringMetric = StringMetricType(
+            disabled = false,
+            category = "telemetry",
+            lifetime = Lifetime.Ping,
+            name = "string_metric",
+            sendInPings = listOf(pingName)
+        )
+
+        resetGlean(getContextWithMockedInfo(), Glean.configuration.copy(
+            serverEndpoint = "http://" + server.hostName + ":" + server.port,
+            logPings = true
+        ))
+
+        // This test relies on testing mode to be disabled, since we need to prove the
+        // real-world async behaviour of this. We don't need to care about clearing it,
+        // the test-unit hooks will call `resetGlean` anyway.
+        Dispatchers.API.setTestingMode(false)
+
+        // This is the important part of the test. Even though both the metrics API and
+        // sendPings are async and off the main thread, "SomeTestValue" should be recorded,
+        // the order of the calls must be preserved.
+        val testValue = "SomeTestValue"
+        stringMetric.set(testValue)
+        ping.send()
+
+        // Trigger worker task to upload the pings in the background. We need
+        // to wait for the work to be enqueued first, since this test runs
+        // asynchronously.
+        waitForEnqueuedWorker(PingUploadWorker.PING_WORKER_TAG)
+        triggerWorkManager()
+
+        // Validate the received data.
+        val request = server.takeRequest(20L, TimeUnit.SECONDS)
+        val docType = request.path.split("/")[3]
+        assertEquals(pingName, docType)
+
+        val pingJson = JSONObject(request.body.readUtf8())
+        assertEquals(pingName, pingJson.getJSONObject("ping_info")["ping_type"])
+        checkPingSchema(pingJson)
+
+        val pingMetricsObject = pingJson.getJSONObject("metrics")!!
+        val pingStringMetrics = pingMetricsObject.getJSONObject("string")!!
+        assertEquals(1, pingStringMetrics.length())
+        assertEquals(testValue, pingStringMetrics.get("telemetry.string_metric"))
     }
 }

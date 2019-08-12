@@ -6,15 +6,22 @@ package mozilla.components.browser.search
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestCoroutineContext
+import mozilla.components.browser.search.provider.SearchEngineList
 import mozilla.components.browser.search.provider.SearchEngineProvider
+import mozilla.components.support.test.argumentCaptor
+import mozilla.components.support.test.eq
+import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
@@ -99,6 +106,26 @@ class SearchEngineManagerTest {
     }
 
     @Test
+    fun `manager returns default engine as default from the provider`() {
+        runBlocking {
+            val mozSearchEngine = mockSearchEngine("mozsearch")
+            val provider = mockProvider(
+                engines = listOf(
+                    mockSearchEngine("google"),
+                    mozSearchEngine,
+                    mockSearchEngine("bing")
+                ),
+                default = mozSearchEngine
+            )
+
+            val manager = SearchEngineManager(listOf(provider))
+
+            val default = manager.getDefaultSearchEngine(RuntimeEnvironment.application)
+            assertEquals("mozsearch", default.identifier)
+        }
+    }
+
+    @Test
     fun `manager returns first engine as default if no identifier is specified`() {
         runBlocking {
             val provider = mockProvider(listOf(
@@ -113,16 +140,114 @@ class SearchEngineManagerTest {
         }
     }
 
-    @Ignore
+    @Test
+    fun `manager returns set default engine as default when no identifier is specified`() {
+        runBlocking {
+            val provider = mockProvider(
+                listOf(
+                    mockSearchEngine("mozsearch"),
+                    mockSearchEngine("google"),
+                    mockSearchEngine("bing")
+                )
+            )
+
+            val manager = SearchEngineManager(listOf(provider))
+            manager.defaultSearchEngine = mockSearchEngine("bing")
+
+            val default = manager.getDefaultSearchEngine(RuntimeEnvironment.application)
+            assertEquals("bing", default.identifier)
+        }
+    }
+
+    @Test
+    fun `manager returns engine from identifier as default when identifier is specified`() {
+        runBlocking {
+            val provider = mockProvider(
+                listOf(
+                    mockSearchEngine("mozsearch", "Mozilla Search"),
+                    mockSearchEngine("google", "Google Search"),
+                    mockSearchEngine("bing", "Bing Search")
+                )
+            )
+
+            val manager = SearchEngineManager(listOf(provider))
+            manager.defaultSearchEngine = mockSearchEngine("bing")
+
+            val default =
+                manager.getDefaultSearchEngine(RuntimeEnvironment.application, "Google Search")
+            assertEquals("google", default.identifier)
+        }
+    }
+
+    @Test
+    fun `manager registers for locale changes`() {
+        val provider = spy(mockProvider(listOf(
+            mockSearchEngine("mozsearch"),
+            mockSearchEngine("google"),
+            mockSearchEngine("bing"))))
+
+        val manager = SearchEngineManager(listOf(provider))
+
+        val context = spy(RuntimeEnvironment.application)
+
+        manager.registerForLocaleUpdates(context)
+        val intentFilter = argumentCaptor<IntentFilter>()
+        verify(context).registerReceiver(eq(manager.localeChangedReceiver), intentFilter.capture())
+
+        intentFilter.value.hasAction(Intent.ACTION_LOCALE_CHANGED)
+    }
+
+    @ObsoleteCoroutinesApi
+    @Test
+    fun `locale update triggers load`() {
+        val provider = spy(mockProvider(listOf(
+            mockSearchEngine("mozsearch"),
+            mockSearchEngine("google"),
+            mockSearchEngine("bing"))))
+        val context = TestCoroutineContext()
+
+        runBlocking(context) {
+            val manager = spy(SearchEngineManager(listOf(provider), coroutineContext))
+            manager.localeChangedReceiver.onReceive(RuntimeEnvironment.application, mock())
+
+            context.triggerActions()
+
+            verify(provider).loadSearchEngines(RuntimeEnvironment.application)
+            verifyNoMoreInteractions(provider)
+        }
+    }
+
+    @ObsoleteCoroutinesApi
+    @Test
+    fun `load calls providers loadSearchEngine`() {
+        val provider = spy(mockProvider(listOf(
+            mockSearchEngine("mozsearch"),
+            mockSearchEngine("google"),
+            mockSearchEngine("bing"))))
+        val context = TestCoroutineContext()
+
+        runBlocking(context) {
+            val manager = spy(SearchEngineManager(listOf(provider), coroutineContext))
+            manager.load(RuntimeEnvironment.application)
+
+            context.triggerActions()
+
+            verify(provider).loadSearchEngines(RuntimeEnvironment.application)
+            verifyNoMoreInteractions(provider)
+        }
+    }
+
+    @ObsoleteCoroutinesApi
     @Test
     fun `locale update broadcast will trigger reload`() {
-        runBlocking {
+        val testContext = TestCoroutineContext()
+        runBlocking(testContext) {
             val provider = spy(mockProvider(listOf(
                     mockSearchEngine("mozsearch"),
                     mockSearchEngine("google"),
                     mockSearchEngine("bing"))))
 
-            val manager = SearchEngineManager(listOf(provider))
+            val manager = SearchEngineManager(listOf(provider), coroutineContext)
 
             val shadow = ShadowApplication.getInstance()
             shadow.assertNoBroadcastListenersOfActionRegistered(
@@ -137,8 +262,11 @@ class SearchEngineManagerTest {
 
             verify(provider, never()).loadSearchEngines(RuntimeEnvironment.application)
 
-            shadow.sendBroadcast(Intent(Intent.ACTION_LOCALE_CHANGED))
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            context.sendBroadcast(Intent(Intent.ACTION_LOCALE_CHANGED))
             launch(Dispatchers.Default) {}.join()
+
+            testContext.triggerActions()
 
             verify(provider).loadSearchEngines(RuntimeEnvironment.application)
             verifyNoMoreInteractions(provider)
@@ -151,10 +279,10 @@ class SearchEngineManagerTest {
         }
     }
 
-    private fun mockProvider(engines: List<SearchEngine>): SearchEngineProvider =
+    private fun mockProvider(engines: List<SearchEngine>, default: SearchEngine? = null): SearchEngineProvider =
             object : SearchEngineProvider {
-                override suspend fun loadSearchEngines(context: Context): List<SearchEngine> {
-                    return engines
+                override suspend fun loadSearchEngines(context: Context): SearchEngineList {
+                    return SearchEngineList(engines, default)
                 }
             }
 

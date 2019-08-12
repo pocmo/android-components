@@ -16,7 +16,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -80,14 +80,9 @@ android {
             setIgnore(true)
         }
 
-        if (flavors.contains("servo") && !flavors.contains("arm")) {
+        if (flavors.contains("servo") && !flavors.contains("arm") && !flavors.contains("x86")) {
             setIgnore(true)
         }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
@@ -103,10 +98,14 @@ configurations {
     geckoReleaseArmImplementation {}
     geckoReleaseX86Implementation {}
     geckoReleaseAarch64Implementation {}
+
+    servoX86Implementation {}
+    servoArmImplementation {}
 }
 
 dependencies {
     implementation project(':concept-awesomebar')
+    implementation project(':concept-fetch')
     implementation project(':concept-engine')
     implementation project(':concept-tabstray')
     implementation project(':concept-toolbar')
@@ -115,6 +114,7 @@ dependencies {
     implementation project(':browser-awesomebar')
     implementation project(':browser-engine-system')
     implementation project(':browser-domains')
+    implementation project(':browser-icons')
     implementation project(':browser-search')
     implementation project(':browser-session')
     implementation project(':browser-tabstray')
@@ -122,15 +122,20 @@ dependencies {
     implementation project(':browser-menu')
     implementation project(':browser-storage-memory')
 
+    implementation project(':lib-fetch-httpurlconnection')
+
     implementation project(':feature-awesomebar')
     implementation project(':feature-contextmenu')
     implementation project(':feature-customtabs')
     implementation project(':feature-intent')
+    implementation project(':feature-readerview')
     implementation project(':feature-search')
     implementation project(':feature-session')
     implementation project(':feature-toolbar')
     implementation project(':feature-tabs')
     implementation project(':feature-prompts')
+    implementation project(':feature-findinpage')
+    implementation project(':feature-sitepermissions')
 
     implementation project(':ui-autocomplete')
 
@@ -139,6 +144,8 @@ dependencies {
     implementation project(':support-ktx')
 
     servoImplementation project(':browser-engine-servo')
+    servoX86Implementation Dependencies.mozilla_servo_x86
+    servoArmImplementation Dependencies.mozilla_servo_arm
 
     geckoNightlyImplementation project(':browser-engine-gecko-nightly')
     geckoNightlyArmImplementation Gecko.geckoview_nightly_arm
@@ -155,10 +162,10 @@ dependencies {
     geckoReleaseX86Implementation Gecko.geckoview_release_x86
     geckoReleaseAarch64Implementation Gecko.geckoview_release_aarch64
 
-    implementation Dependencies.support_design
+    implementation Dependencies.google_material
 
     implementation Dependencies.kotlin_stdlib
 
-    implementation Dependencies.support_appcompat
-    implementation Dependencies.support_constraintlayout
+    implementation Dependencies.androidx_appcompat
+    implementation Dependencies.androidx_constraintlayout
 }

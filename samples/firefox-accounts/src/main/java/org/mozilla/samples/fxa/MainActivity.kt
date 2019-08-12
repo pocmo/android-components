@@ -7,29 +7,35 @@ package org.mozilla.samples.fxa
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
-import android.support.customtabs.CustomTabsIntent
+import androidx.browser.customtabs.CustomTabsIntent
 import android.view.View
 import android.content.Intent
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import mozilla.components.concept.sync.Profile
+import mozilla.components.feature.qr.QrFeature
 import mozilla.components.service.fxa.FirefoxAccount
 import mozilla.components.service.fxa.FxaException
 import mozilla.components.service.fxa.Config
-import mozilla.components.service.fxa.Profile
+import mozilla.components.support.base.log.Log
+import mozilla.components.support.base.log.sink.AndroidLogSink
 import kotlin.coroutines.CoroutineContext
 
+@Suppress("TooManyFunctions")
 open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteListener, CoroutineScope {
-
     private lateinit var account: FirefoxAccount
     private var scopesWithoutKeys: Array<String> = arrayOf("profile")
     private var scopesWithKeys: Array<String> = arrayOf("profile", "https://identity.mozilla.com/apps/oldsync")
     private var scopes: Array<String> = scopesWithoutKeys
     private var wantsKeys: Boolean = false
+
+    private lateinit var qrFeature: QrFeature
 
     private lateinit var job: Job
     override val coroutineContext: CoroutineContext
@@ -39,16 +45,41 @@ open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteList
         const val CLIENT_ID = "12cc4070a481bc73"
         const val REDIRECT_URL = "fxaclient://android.redirect"
         const val CONFIG_URL = "https://latest.dev.lcip.org"
-        const val CONFIG_URL_PAIRING = "https://pairsona.dev.lcip.org"
         const val FXA_STATE_PREFS_KEY = "fxaAppState"
         const val FXA_STATE_KEY = "fxaState"
+        private const val REQUEST_CODE_CAMERA_PERMISSIONS = 1
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Log.addSink(AndroidLogSink())
+
         setContentView(R.layout.activity_main)
         job = Job()
         account = initAccount()
+
+        qrFeature = QrFeature(
+            this,
+            fragmentManager = supportFragmentManager,
+            onNeedToRequestPermissions = { permissions ->
+                ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_CAMERA_PERMISSIONS)
+            },
+            onScanResult = { pairingUrl ->
+                val config = Config(CONFIG_URL, CLIENT_ID, REDIRECT_URL)
+                val acct = FirefoxAccount(config)
+                launch {
+                    try {
+                        val url = acct.beginPairingFlow(pairingUrl, scopes).await()
+                        openWebView(url)
+                    } catch (e: FxaException) {
+                        Log.log(Log.Priority.ERROR, "mozac-samples-fxa", e, "Pairing flow failed for $pairingUrl")
+                    }
+                }
+            }
+        )
+
+        lifecycle.addObserver(qrFeature)
 
         findViewById<View>(R.id.buttonCustomTabs).setOnClickListener {
             launch {
@@ -65,8 +96,7 @@ open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteList
         }
 
         findViewById<View>(R.id.buttonPair).setOnClickListener {
-            val intent = Intent(this@MainActivity, ScanActivity::class.java)
-            startActivity(intent)
+            qrFeature.scan()
         }
 
         findViewById<View>(R.id.buttonLogout).setOnClickListener {
@@ -90,16 +120,6 @@ open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteList
             return it
         }
 
-        intent.extras?.getString("pairingUrl")?.let { pairingUrl ->
-            val config = Config(CONFIG_URL_PAIRING, CLIENT_ID, REDIRECT_URL)
-            val acct = FirefoxAccount(config)
-            launch {
-                val url = acct.beginPairingFlow(pairingUrl, scopes).await()
-                openWebView(url)
-            }
-            return acct
-        }
-
         val config = Config(CONFIG_URL, CLIENT_ID, REDIRECT_URL)
         return FirefoxAccount(config)
     }
@@ -117,8 +137,8 @@ open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteList
 
         if (Intent.ACTION_VIEW == action && data != null) {
             val url = Uri.parse(data)
-            val code = url.getQueryParameter("code")
-            val state = url.getQueryParameter("state")
+            val code = url.getQueryParameter("code")!!
+            val state = url.getQueryParameter("state")!!
             displayAndPersistProfile(code, state)
         }
     }
@@ -172,5 +192,17 @@ open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteList
     private fun displayProfile(profile: Profile) {
         val txtView: TextView = findViewById(R.id.txtView)
         txtView.text = getString(R.string.signed_in, "${profile.displayName ?: ""} ${profile.email}")
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_CODE_CAMERA_PERMISSIONS -> qrFeature.onPermissionsResult(permissions, grantResults)
+        }
+    }
+
+    override fun onBackPressed() {
+        if (!qrFeature.onBackPressed()) {
+            super.onBackPressed()
+        }
     }
 }

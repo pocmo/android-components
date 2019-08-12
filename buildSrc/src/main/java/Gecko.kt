@@ -3,9 +3,20 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 internal object GeckoVersions {
-    const val nightly_version = "66.0.20190117095319"
-    const val beta_version = "65.0.20181211223337"
-    const val release_version = "64.0.20181214004633"
+    /**
+     * GeckoView Nightly Version.
+     */
+    const val nightly_version = "69.0.20190527095441"
+
+    /**
+     * GeckoView Beta Version.
+     */
+    const val beta_version = "68.0.20190520141152"
+
+    /**
+     * GeckoView Release Version.
+     */
+    const val release_version = "67.0.20190521210220"
 }
 
 @Suppress("MaxLineLength")

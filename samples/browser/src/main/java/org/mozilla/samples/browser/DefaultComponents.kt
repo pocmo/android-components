@@ -11,10 +11,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.domains.autocomplete.ShippedDomainsProvider
 import mozilla.components.browser.engine.system.SystemEngine
+import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.menu.BrowserMenuBuilder
-import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.BrowserMenuCheckbox
 import mozilla.components.browser.menu.item.BrowserMenuDivider
+import mozilla.components.browser.menu.item.BrowserMenuImageText
+import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.SimpleBrowserMenuItem
 import mozilla.components.browser.search.SearchEngineManager
 import mozilla.components.browser.session.Session
@@ -25,9 +27,11 @@ import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.Engine
 import mozilla.components.feature.intent.IntentProcessor
 import mozilla.components.feature.search.SearchUseCases
-import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.session.HistoryDelegate
+import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.tabs.TabsUseCases
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
+import org.mozilla.samples.browser.integration.FindInPageIntegration
 import org.mozilla.samples.browser.request.SampleRequestInterceptor
 import java.util.concurrent.TimeUnit
 
@@ -38,6 +42,7 @@ open class DefaultComponents(private val applicationContext: Context) {
         DefaultSettings().apply {
             historyTrackingDelegate = HistoryDelegate(historyStorage)
             requestInterceptor = SampleRequestInterceptor(applicationContext)
+            remoteDebuggingEnabled = true
             supportMultipleWindows = true
         }
     }
@@ -46,6 +51,8 @@ open class DefaultComponents(private val applicationContext: Context) {
     open val engine: Engine by lazy {
         SystemEngine(applicationContext, engineSettings)
     }
+
+    val icons by lazy { BrowserIcons(applicationContext, HttpURLConnectionClient()) }
 
     // Storage
     val historyStorage by lazy { InMemoryHistoryStorage() }
@@ -66,6 +73,8 @@ open class DefaultComponents(private val applicationContext: Context) {
                 .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
                 .whenGoingToBackground()
                 .whenSessionsChange()
+
+            icons.install(engine, this)
         }
     }
 
@@ -84,7 +93,14 @@ open class DefaultComponents(private val applicationContext: Context) {
     val defaultSearchUseCase by lazy { { searchTerms: String -> searchUseCases.defaultSearch.invoke(searchTerms) } }
 
     // Intent
-    val sessionIntentProcessor by lazy { IntentProcessor(sessionUseCases, sessionManager, searchUseCases) }
+    val sessionIntentProcessor by lazy {
+        IntentProcessor(
+            sessionUseCases,
+            sessionManager,
+            searchUseCases,
+            applicationContext
+        )
+    }
 
     // Menu
     val menuBuilder by lazy { BrowserMenuBuilder(menuItems) }
@@ -92,15 +108,16 @@ open class DefaultComponents(private val applicationContext: Context) {
     private val menuItems by lazy {
         listOf(
                 menuToolbar,
-                SimpleBrowserMenuItem("Share") {
+                BrowserMenuImageText("Share", R.drawable.mozac_ic_share, android.R.color.black) {
                     Toast.makeText(applicationContext, "Share", Toast.LENGTH_SHORT).show()
                 },
                 SimpleBrowserMenuItem("Settings") {
                     Toast.makeText(applicationContext, "Settings", Toast.LENGTH_SHORT).show()
                 },
-
+                SimpleBrowserMenuItem("Find In Page") {
+                    FindInPageIntegration.launch?.invoke()
+                },
                 BrowserMenuDivider(),
-
                 SimpleBrowserMenuItem("Clear Data") {
                     sessionUseCases.clearData.invoke()
                 },
@@ -116,14 +133,18 @@ open class DefaultComponents(private val applicationContext: Context) {
         val forward = BrowserMenuItemToolbar.Button(
                 mozilla.components.ui.icons.R.drawable.mozac_ic_forward,
                 iconTintColorResource = R.color.photonBlue90,
-                contentDescription = "Forward") {
+                contentDescription = "Forward",
+                isEnabled = { sessionManager.selectedSession?.canGoForward == true }
+        ) {
             sessionUseCases.goForward.invoke()
         }
 
         val refresh = BrowserMenuItemToolbar.Button(
                 mozilla.components.ui.icons.R.drawable.mozac_ic_refresh,
                 iconTintColorResource = R.color.photonBlue90,
-                contentDescription = "Refresh") {
+                contentDescription = "Refresh",
+                isEnabled = { sessionManager.selectedSession?.loading != true }
+        ) {
             sessionUseCases.reload.invoke()
         }
 

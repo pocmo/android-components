@@ -6,6 +6,10 @@ package mozilla.components.browser.engine.gecko
 
 import android.content.Context
 import android.util.AttributeSet
+import mozilla.components.browser.engine.gecko.integration.LocaleSettingUpdater
+import mozilla.components.browser.engine.gecko.mediaquery.from
+import mozilla.components.browser.engine.gecko.mediaquery.toGeckoValue
+import mozilla.components.browser.engine.gecko.webextension.GeckoWebExtension
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
@@ -13,8 +17,13 @@ import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.engine.Settings
 import mozilla.components.concept.engine.history.HistoryTrackingDelegate
+import mozilla.components.concept.engine.mediaquery.PreferredColorScheme
+import mozilla.components.concept.engine.webextension.WebExtension
 import org.json.JSONObject
+import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
+import org.mozilla.geckoview.GeckoRuntimeSettings
+import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoWebExecutor
 
 /**
@@ -27,6 +36,20 @@ class GeckoEngine(
     executorProvider: () -> GeckoWebExecutor = { GeckoWebExecutor(runtime) }
 ) : Engine {
     private val executor by lazy { executorProvider.invoke() }
+
+    private val localeUpdater = LocaleSettingUpdater(context, runtime)
+
+    init {
+        runtime.delegate = GeckoRuntime.Delegate {
+            // On shutdown: The runtime is shutting down (possibly because of an unrecoverable error state). We crash
+            // the app here for two reasons:
+            //  - We want to know about those unsolicited shutdowns and fix those issues.
+            //  - We can't recover easily from this situation. Just continuing will leave us with an engine that
+            //    doesn't do anything anymore.
+            @Suppress("TooGenericExceptionThrown")
+            throw RuntimeException("GeckoRuntime is shutting down")
+        }
+    }
 
     /**
      * Creates a new Gecko-based EngineView.
@@ -59,6 +82,27 @@ class GeckoEngine(
         executor.speculativeConnect(url)
     }
 
+    /**
+     * See [Engine.installWebExtension].
+     */
+    override fun installWebExtension(
+        id: String,
+        url: String,
+        allowContentMessaging: Boolean,
+        onSuccess: ((WebExtension) -> Unit),
+        onError: ((String, Throwable) -> Unit)
+    ) {
+        GeckoWebExtension(id, url, allowContentMessaging).also { ext ->
+            runtime.registerWebExtension(ext.nativeExtension).then({
+                onSuccess(ext)
+                GeckoResult<Void>()
+            }, {
+                throwable -> onError(id, throwable)
+                GeckoResult<Void>()
+            })
+        }
+    }
+
     override fun name(): String = "Gecko"
 
     /**
@@ -73,11 +117,22 @@ class GeckoEngine(
             get() = runtime.settings.webFontsEnabled
             set(value) { runtime.settings.webFontsEnabled = value }
 
+        override var automaticFontSizeAdjustment: Boolean
+            get() = runtime.settings.automaticFontSizeAdjustment
+            set(value) { runtime.settings.automaticFontSizeAdjustment = value }
+
+        override var automaticLanguageAdjustment: Boolean
+            get() = localeUpdater.enabled
+            set(value) {
+                localeUpdater.enabled = value
+                defaultSettings?.automaticLanguageAdjustment = value
+            }
+
         override var trackingProtectionPolicy: TrackingProtectionPolicy?
-            get() = TrackingProtectionPolicy.select(runtime.settings.trackingProtectionCategories)
+            get() = TrackingProtectionPolicy.select(runtime.settings.contentBlocking.categories)
             set(value) {
                 value?.let {
-                    runtime.settings.trackingProtectionCategories = it.categories
+                    runtime.settings.contentBlocking.categories = it.categories
                     defaultSettings?.trackingProtectionPolicy = value
                 }
             }
@@ -95,19 +150,68 @@ class GeckoEngine(
             set(value) { defaultSettings?.testingModeEnabled = value }
 
         override var userAgentString: String?
-            // TODO if no default user agent string is provided we should
-            // return the engine default here, but we can't get to it in
-            // a practical way right now: https://bugzilla.mozilla.org/show_bug.cgi?id=1512997
-            get() = defaultSettings?.userAgentString
+            get() = defaultSettings?.userAgentString ?: GeckoSession.getDefaultUserAgent()
             set(value) { defaultSettings?.userAgentString = value }
+
+        override var preferredColorScheme: PreferredColorScheme
+            get() = PreferredColorScheme.from(runtime.settings.preferredColorScheme)
+            set(value) { runtime.settings.preferredColorScheme = value.toGeckoValue() }
+
+        override var allowAutoplayMedia: Boolean
+            get() = runtime.settings.autoplayDefault == GeckoRuntimeSettings.AUTOPLAY_DEFAULT_ALLOWED
+            set(value) {
+                runtime.settings.autoplayDefault = if (value) {
+                    GeckoRuntimeSettings.AUTOPLAY_DEFAULT_ALLOWED
+                } else {
+                    GeckoRuntimeSettings.AUTOPLAY_DEFAULT_BLOCKED
+                }
+            }
+
+        override var suspendMediaWhenInactive: Boolean
+            get() = defaultSettings?.suspendMediaWhenInactive ?: false
+            set(value) { defaultSettings?.suspendMediaWhenInactive = value }
+
+        override var fontInflationEnabled: Boolean?
+            get() = runtime.settings.fontInflationEnabled
+            set(value) {
+                // automaticFontSizeAdjustment is set to true by default, which
+                // will cause an exception if fontInflationEnabled is set
+                // (to either true or false). We therefore need to be able to
+                // set our built-in default value to null so that the exception
+                // is only thrown if an app is configured incorrectly but not
+                // if it uses default values.
+                value?.let {
+                    runtime.settings.fontInflationEnabled = it
+                }
+            }
+
+        override var fontSizeFactor: Float?
+            get() = runtime.settings.fontSizeFactor
+            set(value) {
+                // automaticFontSizeAdjustment is set to true by default, which
+                // will cause an exception if fontSizeFactor is set as well.
+                // We therefore need to be able to set our built-in default value
+                // to null so that the exception is only thrown if an app is
+                // configured incorrectly but not if it uses default values.
+                value?.let {
+                    runtime.settings.fontSizeFactor = it
+                }
+            }
     }.apply {
         defaultSettings?.let {
             this.javascriptEnabled = it.javascriptEnabled
             this.webFontsEnabled = it.webFontsEnabled
+            this.automaticFontSizeAdjustment = it.automaticFontSizeAdjustment
+            this.automaticLanguageAdjustment = it.automaticLanguageAdjustment
             this.trackingProtectionPolicy = it.trackingProtectionPolicy
             this.remoteDebuggingEnabled = it.remoteDebuggingEnabled
             this.testingModeEnabled = it.testingModeEnabled
             this.userAgentString = it.userAgentString
+            this.preferredColorScheme = it.preferredColorScheme
+            this.allowAutoplayMedia = it.allowAutoplayMedia
+            this.suspendMediaWhenInactive = it.suspendMediaWhenInactive
+            this.fontInflationEnabled = it.fontInflationEnabled
+            this.fontSizeFactor = it.fontSizeFactor
         }
     }
 }

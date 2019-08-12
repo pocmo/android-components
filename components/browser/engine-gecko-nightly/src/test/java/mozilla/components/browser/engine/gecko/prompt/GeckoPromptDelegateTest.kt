@@ -37,12 +37,19 @@ import org.robolectric.RobolectricTestRunner
 import mozilla.components.support.ktx.kotlin.toDate
 import org.junit.Assert
 import org.junit.Assert.assertNotNull
+import org.mozilla.geckoview.AllowOrDeny
+import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEGATIVE
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEUTRAL
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_POSITIVE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.TextCallback
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATETIME_LOCAL
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_MONTH
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_TIME
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_WEEK
+import org.robolectric.Shadows.shadowOf
+import java.io.FileInputStream
 import java.security.InvalidParameterException
 import java.util.Date
 import java.util.Calendar
@@ -59,24 +66,8 @@ class GeckoPromptDelegateTest {
         var promptRequestSingleChoice: PromptRequest = MultipleChoice(arrayOf()) {}
         var confirmWasCalled = false
 
-        val callback = object : GeckoSession.PromptDelegate.ChoiceCallback {
-            override fun confirm(id: String?) {}
-
-            override fun confirm(items: Array<out GeckoSession.PromptDelegate.Choice>?) {}
-
-            override fun dismiss() {}
-
-            override fun getCheckboxValue() = false
-
-            override fun setCheckboxValue(value: Boolean) {}
-
-            override fun hasCheckbox() = false
-
-            override fun getCheckboxMessage() = ""
-
-            override fun confirm(ids: Array<out String>) {}
-
-            override fun confirm(item: GeckoChoice) {
+        val callback = object : DefaultGeckoChoiceCallback() {
+            override fun confirm(id: String?) {
                 confirmWasCalled = true
             }
         }
@@ -105,26 +96,10 @@ class GeckoPromptDelegateTest {
         var promptRequestSingleChoice: PromptRequest = SingleChoice(arrayOf()) {}
         var confirmWasCalled = false
 
-        val callback = object : GeckoSession.PromptDelegate.ChoiceCallback {
-            override fun confirm(id: String?) {}
-
-            override fun confirm(items: Array<out GeckoSession.PromptDelegate.Choice>?) {}
-
-            override fun dismiss() {}
-
-            override fun getCheckboxValue() = false
-
-            override fun setCheckboxValue(value: Boolean) {}
-
-            override fun hasCheckbox() = false
-
-            override fun getCheckboxMessage() = ""
-
+        val callback = object : DefaultGeckoChoiceCallback() {
             override fun confirm(ids: Array<out String>) {
                 confirmWasCalled = true
             }
-
-            override fun confirm(item: GeckoChoice) {}
         }
 
         val gecko = GeckoPromptDelegate(mockSession)
@@ -151,17 +126,8 @@ class GeckoPromptDelegateTest {
         var promptRequestSingleChoice: PromptRequest = PromptRequest.MenuChoice(arrayOf()) {}
         var confirmWasCalled = false
 
-        val callback = object : GeckoSession.PromptDelegate.ChoiceCallback {
-            override fun confirm(id: String?) = Unit
-            override fun confirm(items: Array<out GeckoSession.PromptDelegate.Choice>?) = Unit
-            override fun dismiss() = Unit
-            override fun getCheckboxValue() = false
-            override fun setCheckboxValue(value: Boolean) = Unit
-            override fun hasCheckbox() = false
-            override fun getCheckboxMessage() = ""
-            override fun confirm(ids: Array<out String>) = Unit
-
-            override fun confirm(item: GeckoChoice) {
+        val callback = object : DefaultGeckoChoiceCallback() {
+            override fun confirm(id: String?) {
                 confirmWasCalled = true
             }
         }
@@ -187,6 +153,19 @@ class GeckoPromptDelegateTest {
 
         request.onConfirm(request.choices.first())
         assertTrue(confirmWasCalled)
+    }
+
+    @Test(expected = InvalidParameterException::class)
+    fun `calling onChoicePrompt with not valid Gecko ChoiceType will throw an exception`() {
+        val promptDelegate = GeckoPromptDelegate(mock())
+        promptDelegate.onChoicePrompt(
+            mock(),
+            "title",
+            "message",
+            -1,
+            arrayOf(),
+            mock()
+        )
     }
 
     @Test
@@ -234,14 +213,6 @@ class GeckoPromptDelegateTest {
     }
 
     @Test
-    fun `hitting functions not yet implemented`() {
-        val mockSession = GeckoEngineSession(Mockito.mock(GeckoRuntime::class.java))
-        val gecko = GeckoPromptDelegate(mockSession)
-        gecko.onButtonPrompt(mock(), "", "", null, mock())
-        gecko.onPopupRequest(mock(), "")
-    }
-
-    @Test
     fun `hitting default values`() {
         val mockSession = GeckoEngineSession(Mockito.mock(GeckoRuntime::class.java))
         val gecko = GeckoPromptDelegate(mockSession)
@@ -249,6 +220,7 @@ class GeckoPromptDelegateTest {
         gecko.onDateTimePrompt(mock(), null, DATETIME_TYPE_WEEK, null, null, null, mock())
         gecko.onDateTimePrompt(mock(), null, DATETIME_TYPE_MONTH, null, null, null, mock())
         gecko.onDateTimePrompt(mock(), null, DATETIME_TYPE_TIME, null, "", "", mock())
+        gecko.onButtonPrompt(mock(), null, null, arrayOf<String?>(null, null, null), mock())
     }
 
     @Test
@@ -624,7 +596,7 @@ class GeckoPromptDelegateTest {
     }
 
     @Test(expected = InvalidParameterException::class)
-    fun `Calling onDateTimePrompt with not valid DatetimeType will throw an exception`() {
+    fun `Calling onDateTimePrompt with invalid DatetimeType will throw an exception`() {
         val promptDelegate = GeckoPromptDelegate(mock())
         promptDelegate.onDateTimePrompt(
             mock(),
@@ -660,6 +632,11 @@ class GeckoPromptDelegateTest {
         var onSingleFileSelectedWasCalled = false
         var onMultipleFilesSelectedWasCalled = false
         var onDismissWasCalled = false
+        val mockUri: Uri = mock()
+        val mockFileInput: FileInputStream = mock()
+        val shadowContentResolver = shadowOf(context.contentResolver)
+
+        shadowContentResolver.registerInputStream(mockUri, mockFileInput)
 
         val callback = object : GeckoSession.PromptDelegate.FileCallback {
             override fun dismiss() {
@@ -692,10 +669,10 @@ class GeckoPromptDelegateTest {
 
         val filePickerRequest = request as PromptRequest.File
 
-        filePickerRequest.onSingleFileSelected(context, mock())
+        filePickerRequest.onSingleFileSelected(context, mockUri)
         assertTrue(onSingleFileSelectedWasCalled)
 
-        filePickerRequest.onMultipleFilesSelected(context, emptyArray())
+        filePickerRequest.onMultipleFilesSelected(context, arrayOf(mockUri))
         assertTrue(onMultipleFilesSelectedWasCalled)
 
         filePickerRequest.onDismiss()
@@ -901,5 +878,133 @@ class GeckoPromptDelegateTest {
             assertTrue(setCheckboxValueWasCalled)
             assertTrue(confirmWasCalled)
         }
+    }
+
+    @Test
+    fun `onPopupRequest must provide a Popup PromptRequest`() {
+        val mockSession = GeckoEngineSession(Mockito.mock(GeckoRuntime::class.java))
+        var request: PromptRequest.Popup? = null
+        var onAllowWasCalled = false
+        var onDenyWasCalled = false
+
+        val promptDelegate = GeckoPromptDelegate(mockSession)
+
+        mockSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest as PromptRequest.Popup
+            }
+        })
+
+        var geckoCallback = promptDelegate.onPopupRequest(mock(), "www.popuptest.com/")
+
+        val geckoThen: (AllowOrDeny?) -> GeckoResult<AllowOrDeny> = {
+            when (it!!) {
+                AllowOrDeny.ALLOW -> { onAllowWasCalled = true }
+                AllowOrDeny.DENY -> { onDenyWasCalled = true }
+            }
+            geckoCallback
+        }
+
+        geckoCallback.then(geckoThen)
+
+        with(request!!) {
+            assertEquals(targetUri, "www.popuptest.com/")
+
+            onAllow()
+            assertTrue(onAllowWasCalled)
+        }
+
+        geckoCallback = promptDelegate.onPopupRequest(mock(), "www.popuptest.com/")
+        geckoCallback.then(geckoThen)
+
+        request!!.onDeny()
+        assertTrue(onDenyWasCalled)
+    }
+
+    @Test
+    fun `onButtonPrompt must provide a Confirm PromptRequest`() {
+        val mockSession = GeckoEngineSession(Mockito.mock(GeckoRuntime::class.java))
+        var request: PromptRequest.Confirm? = null
+        var onPositiveButtonWasCalled = false
+        var onNegativeButtonWasCalled = false
+        var onNeutralButtonWasCalled = false
+        var dismissWasCalled = false
+        var setCheckboxValueWasCalled = false
+
+        val promptDelegate = GeckoPromptDelegate(mockSession)
+
+        mockSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest as PromptRequest.Confirm
+            }
+        })
+
+        val callback = object : GeckoSession.PromptDelegate.ButtonCallback {
+
+            override fun confirm(button: Int) {
+                when (button) {
+                    BUTTON_TYPE_POSITIVE -> onPositiveButtonWasCalled = true
+                    BUTTON_TYPE_NEGATIVE -> onNegativeButtonWasCalled = true
+                    BUTTON_TYPE_NEUTRAL -> onNeutralButtonWasCalled = true
+                }
+            }
+
+            override fun setCheckboxValue(value: Boolean) {
+                setCheckboxValueWasCalled = true
+            }
+
+            override fun dismiss() {
+                dismissWasCalled = true
+            }
+
+            override fun getCheckboxValue(): Boolean = false
+            override fun hasCheckbox(): Boolean = true
+            override fun getCheckboxMessage(): String = ""
+        }
+
+        promptDelegate.onButtonPrompt(
+            mock(),
+            "title",
+            "message",
+            arrayOf("positive", "neutral", "negative"),
+            callback
+        )
+
+        with(request!!) {
+
+            assertNotNull(request)
+            assertEquals(title, "title")
+            assertEquals(message, "message")
+            assertEquals(hasShownManyDialogs, true)
+            assertEquals(positiveButtonTitle, "positive")
+            assertEquals(negativeButtonTitle, "negative")
+            assertEquals(neutralButtonTitle, "neutral")
+
+            onConfirmPositiveButton(false)
+            assertTrue(onPositiveButtonWasCalled)
+
+            onConfirmNegativeButton(false)
+            assertTrue(onNegativeButtonWasCalled)
+
+            onConfirmNeutralButton(false)
+            assertTrue(onNeutralButtonWasCalled)
+
+            assertTrue(setCheckboxValueWasCalled)
+
+            onDismiss()
+            assertTrue(dismissWasCalled)
+        }
+    }
+
+    open class DefaultGeckoChoiceCallback : GeckoSession.PromptDelegate.ChoiceCallback {
+        override fun confirm(items: Array<out GeckoChoice>?) = Unit
+        override fun dismiss() {}
+        override fun getCheckboxValue() = false
+        override fun setCheckboxValue(value: Boolean) = Unit
+        override fun hasCheckbox() = false
+        override fun getCheckboxMessage() = ""
+        override fun confirm(ids: Array<out String>) = Unit
+        override fun confirm(item: GeckoChoice) = Unit
+        override fun confirm(id: String?) = Unit
     }
 }

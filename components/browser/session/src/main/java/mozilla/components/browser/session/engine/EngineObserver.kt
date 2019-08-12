@@ -10,22 +10,39 @@ import mozilla.components.browser.session.Download
 import mozilla.components.browser.session.Session
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.HitResult
+import mozilla.components.concept.engine.media.Media
+import mozilla.components.concept.engine.media.RecordingDevice
 import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.support.base.observer.Consumable
 
+/**
+ * [EngineSession.Observer] implementation responsible to update the state of a [Session] from the events coming out of
+ * an [EngineSession].
+ */
 @Suppress("TooManyFunctions")
-internal class EngineObserver(val session: Session) : EngineSession.Observer {
+internal class EngineObserver(
+    val session: Session
+) : EngineSession.Observer {
 
     override fun onLocationChange(url: String) {
+        if (session.url != url) {
+            session.title = ""
+            session.icon = null
+        }
+
         session.url = url
-        session.searchTerms = ""
-        session.title = ""
 
         session.contentPermissionRequest.consume {
             it.reject()
             true
+        }
+    }
+
+    override fun onLoadRequest(triggeredByUserInteraction: Boolean) {
+        if (triggeredByUserInteraction) {
+            session.searchTerms = ""
         }
     }
 
@@ -121,5 +138,26 @@ internal class EngineObserver(val session: Session) : EngineSession.Observer {
 
     override fun onCloseWindowRequest(windowRequest: WindowRequest) {
         session.closeWindowRequest = Consumable.from(windowRequest)
+    }
+
+    override fun onMediaAdded(media: Media) {
+        session.media = session.media.toMutableList().also {
+            it.add(media)
+        }
+    }
+
+    override fun onMediaRemoved(media: Media) {
+        session.media = session.media.toMutableList().also {
+            it.remove(media)
+        }
+        media.unregisterObservers()
+    }
+
+    override fun onCrashStateChange(crashed: Boolean) {
+        session.crashed = crashed
+    }
+
+    override fun onRecordingStateChanged(devices: List<RecordingDevice>) {
+        session.recordingDevices = devices
     }
 }

@@ -6,8 +6,8 @@ package mozilla.components.service.glean.storages
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
-import mozilla.components.service.glean.Lifetime
-import mozilla.components.service.glean.UuidMetricType
+import mozilla.components.service.glean.private.Lifetime
+import mozilla.components.service.glean.private.UuidMetricType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -26,12 +26,6 @@ class UuidsStorageEngineTest {
     @Before
     fun setUp() {
         UuidsStorageEngine.applicationContext = ApplicationProvider.getApplicationContext()
-        // Clear the stored "user" preferences between tests.
-        ApplicationProvider.getApplicationContext<Context>()
-            .getSharedPreferences(UuidsStorageEngine.javaClass.simpleName, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .apply()
         UuidsStorageEngine.clearAllStores()
     }
 
@@ -51,9 +45,15 @@ class UuidsStorageEngineTest {
         val sharedPreferences = mock(SharedPreferences::class.java)
         `when`(sharedPreferences.all).thenAnswer { persistedSample }
         `when`(context.getSharedPreferences(
-            eq(storageEngine::class.java.simpleName),
+            eq(storageEngine::class.java.canonicalName),
             eq(Context.MODE_PRIVATE)
         )).thenReturn(sharedPreferences)
+        `when`(context.getSharedPreferences(
+            eq("${storageEngine::class.java.canonicalName}.PingLifetime"),
+            eq(Context.MODE_PRIVATE)
+        )).thenReturn(ApplicationProvider.getApplicationContext<Context>()
+            .getSharedPreferences("${storageEngine::class.java.canonicalName}.PingLifetime",
+                Context.MODE_PRIVATE))
 
         storageEngine.applicationContext = context
         val snapshot = storageEngine.getSnapshot(storeName = "store1", clearStore = true)
@@ -221,7 +221,7 @@ class UuidsStorageEngineTest {
 
         // Check that the persisted shared prefs contains the expected data.
         val storedData = ApplicationProvider.getApplicationContext<Context>()
-            .getSharedPreferences(storageEngine.javaClass.simpleName, Context.MODE_PRIVATE)
+            .getSharedPreferences(storageEngine.javaClass.canonicalName, Context.MODE_PRIVATE)
             .all
 
         assertEquals(2, storedData.size)

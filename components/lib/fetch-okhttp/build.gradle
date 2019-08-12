@@ -26,8 +26,11 @@ dependencies {
     implementation Dependencies.kotlin_coroutines
 
     implementation Dependencies.thirdparty_okhttp
+    implementation Dependencies.thirdparty_okhttp_urlconnection
 
     implementation project(':concept-fetch')
+
+    testImplementation project(':support-test')
 
     testImplementation Dependencies.testing_junit
     testImplementation Dependencies.testing_robolectric

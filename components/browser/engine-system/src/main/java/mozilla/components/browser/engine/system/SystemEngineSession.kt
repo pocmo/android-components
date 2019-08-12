@@ -5,7 +5,6 @@
 package mozilla.components.browser.engine.system
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -42,7 +41,6 @@ class SystemEngineSession(
     private val context: Context,
     private val defaultSettings: Settings? = null
 ) : EngineSession() {
-
     @Volatile internal lateinit var internalSettings: Settings
     @Volatile internal var historyTrackingDelegate: HistoryTrackingDelegate? = null
     @Volatile internal var trackingProtectionPolicy: TrackingProtectionPolicy? = null
@@ -53,7 +51,7 @@ class SystemEngineSession(
     // This is public for FFTV which needs access to the WebView instance. We can mark it internal once
     // https://github.com/mozilla-mobile/android-components/issues/1616 is resolved.
     @Volatile var webView: WebView = NestedWebView(context)
-        internal set(value) {
+        set(value) {
             field = value
             initSettings()
         }
@@ -155,6 +153,18 @@ class SystemEngineSession(
     }
 
     /**
+     * See [EngineSession.close]
+     */
+    override fun close() {
+        super.close()
+        // The WebView instance must remain useable for the duration of this session.
+        // We can only destroy it once we're sure this session will not be used
+        // again which is why destroy happens here are not part of regular (activity)
+        // lifecycle event.
+        webView.destroy()
+    }
+
+    /**
      * See [EngineSession.clearData]
      */
     override fun clearData() {
@@ -197,6 +207,16 @@ class SystemEngineSession(
     }
 
     /**
+     * This method is a no-op.
+     */
+    override fun recoverFromCrash(): Boolean {
+        // Do nothing.
+        // Technically we could remember saved states and restore the last one we saw. But for that to be useful we
+        // would need to implement and handle onRenderProcessGone() first.
+        return false
+    }
+
+    /**
      * See [EngineSession.settings]
      */
     override val settings: Settings
@@ -207,7 +227,7 @@ class SystemEngineSession(
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) = set(value)
     }
 
-    internal fun initSettings(): Settings {
+    private fun initSettings() {
         webView.settings?.let { webSettings ->
             // Explicitly set global defaults.
             webSettings.setAppCacheEnabled(false)
@@ -218,10 +238,12 @@ class SystemEngineSession(
             // We currently don't implement the callback to support turning this on.
             webSettings.setGeolocationEnabled(false)
 
-            // webViewSettings built-in zoom controls are the only supported ones, so they should be turned on.
+            // webViewSettings built-in zoom controls are the only supported ones,
+            // so they should be turned on but hidden.
             webSettings.builtInZoomControls = true
+            webSettings.displayZoomControls = false
 
-            return initSettings(webView, webSettings)
+            initSettings(webView, webSettings)
         }
     }
 
@@ -234,7 +256,7 @@ class SystemEngineSession(
         webSettings.savePassword = false
     }
 
-    private fun initSettings(webView: WebView, s: WebSettings): Settings {
+    private fun initSettings(webView: WebView, s: WebSettings) {
         internalSettings = object : Settings() {
             override var javascriptEnabled by WebSetting(s::getJavaScriptEnabled, s::setJavaScriptEnabled)
             override var domStorageEnabled by WebSetting(s::getDomStorageEnabled, s::setDomStorageEnabled)
@@ -296,7 +318,6 @@ class SystemEngineSession(
                 supportMultipleWindows = it.supportMultipleWindows
             }
         }
-        return internalSettings
     }
 
     /**
@@ -319,13 +340,6 @@ class SystemEngineSession(
      */
     override fun exitFullScreenMode() {
         fullScreenCallback?.onCustomViewHidden()
-    }
-
-    override fun captureThumbnail(): Bitmap? {
-        webView.buildDrawingCache()
-        val outBitmap = webView.drawingCache?.let { cache -> Bitmap.createBitmap(cache) }
-        webView.destroyDrawingCache()
-        return outBitmap
     }
 
     internal fun toggleDesktopUA(userAgent: String, requestDesktop: Boolean): String {

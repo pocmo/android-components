@@ -39,6 +39,31 @@ interface Headers : Iterable<Header> {
      * Returns true if a [Header] with the given [name] exists.
      */
     operator fun contains(name: String): Boolean
+
+    /**
+     * A collection of common HTTP header names.
+     *
+     * A list of common HTTP request headers can be found at
+     *   https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Standard_request_fields
+     *
+     * A list of common HTTP response headers can be found at
+     *   https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Standard_response_fields
+     *
+     * @see [Headers.Values]
+     */
+    object Names {
+        const val CONTENT_TYPE = "Content-Type"
+        const val USER_AGENT = "User-Agent"
+    }
+
+    /**
+     * A collection of common HTTP header values.
+     *
+     * @see [Headers.Names]
+     */
+    object Values {
+        const val CONTENT_TYPE_FORM_URLENCODED = "application/x-www-form-urlencoded"
+    }
 }
 
 /**
@@ -73,7 +98,7 @@ class MutableHeaders(
     /**
      * Returns the last value corresponding to the specified header field name. Or null if the header does not exist.
      */
-    override fun get(name: String) = headers.lastOrNull { header -> header.name == name }?.value
+    override fun get(name: String) = headers.lastOrNull { it.name.toLowerCase() == name.toLowerCase() }?.value
 
     /**
      * Returns the list of values corresponding to the specified header field name.

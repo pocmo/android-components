@@ -6,14 +6,13 @@ package mozilla.components.service.glean.storages
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
-import mozilla.components.service.glean.CommonMetricData
+import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.support.base.log.logger.Logger
 import java.util.UUID
 
 /**
  * This singleton handles the in-memory storage logic for uuids. It is meant to be used by
- * the Specific UUID API and the ping assembling objects. No validation on the stored data
- * is performed at this point: validation must be performed by the Specific Uuids API.
+ * the Specific UUID API and the ping assembling objects.
  *
  * This class contains a reference to the Android application Context. While the IDE warns
  * us that this could leak, the application context lives as long as the application and this
@@ -24,7 +23,7 @@ internal object UuidsStorageEngine : UuidsStorageEngineImplementation()
 
 internal open class UuidsStorageEngineImplementation(
     override val logger: Logger = Logger("glean/UuidsStorageEngine")
-) : GenericScalarStorageEngine<UUID>() {
+) : GenericStorageEngine<UUID>() {
 
     override fun deserializeSingleMetric(metricName: String, value: Any?): UUID? {
         return try {
@@ -49,11 +48,10 @@ internal open class UuidsStorageEngineImplementation(
      * @param metricData object with metric settings
      * @param value the uuid value to record
      */
-    @Synchronized
     fun record(
         metricData: CommonMetricData,
         value: UUID
     ) {
-        super.recordScalar(metricData, value)
+        super.recordMetric(metricData, value)
     }
 }

@@ -9,9 +9,12 @@ import mozilla.components.concept.fetch.Headers
 import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.Response
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient.Companion.getOrCreateCookieManager
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.net.CookieHandler
+import java.net.CookieManager
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.GZIPInputStream
@@ -29,6 +32,15 @@ class HttpURLConnectionClient : Client() {
         connection.addBodyFrom(request)
 
         return connection.toResponse()
+    }
+
+    companion object {
+        fun getOrCreateCookieManager(): CookieManager {
+            if (CookieHandler.getDefault() == null) {
+                CookieHandler.setDefault(CookieManager())
+            }
+            return CookieHandler.getDefault() as CookieManager
+        }
     }
 }
 
@@ -51,7 +63,7 @@ private fun HttpURLConnection.addBodyFrom(request: Request) {
     }
 }
 
-private fun HttpURLConnection.setupWith(request: Request) {
+internal fun HttpURLConnection.setupWith(request: Request) {
     requestMethod = request.method.name
     instanceFollowRedirects = request.redirect == Request.Redirect.FOLLOW
 
@@ -61,6 +73,19 @@ private fun HttpURLConnection.setupWith(request: Request) {
 
     request.readTimeout?.let { (timeout, unit) ->
         readTimeout = unit.toMillis(timeout).toInt()
+    }
+
+    useCaches = request.useCaches
+
+    // HttpURLConnection can't be configured to omit cookies. As
+    // a workaround, we delete all cookies we have stored for
+    // the request URI.
+    val cookieManager = getOrCreateCookieManager()
+    if (request.cookiePolicy == Request.CookiePolicy.OMIT) {
+        val uri = URL(request.url).toURI()
+        for (cookie in cookieManager.cookieStore.get(uri)) {
+            cookieManager.cookieStore.remove(uri, cookie)
+        }
     }
 }
 
@@ -77,11 +102,12 @@ private fun HttpURLConnection.addHeadersFrom(request: Request, defaultHeaders: H
 }
 
 private fun HttpURLConnection.toResponse(): Response {
+    val headers = translateHeaders(this)
     return Response(
         url.toString(),
         responseCode,
-        translateHeaders(this),
-        createBody(this)
+        headers,
+        createBody(this, headers["Content-Type"])
     )
 }
 
@@ -107,14 +133,15 @@ private fun translateHeaders(connection: HttpURLConnection): Headers {
     return headers
 }
 
-private fun createBody(connection: HttpURLConnection): Response.Body {
+private fun createBody(connection: HttpURLConnection, contentType: String?): Response.Body {
     val gzipped = connection.contentEncoding == "gzip"
 
     withFileNotFoundExceptionIgnored {
         return HttpUrlConnectionBody(
             connection,
             connection.inputStream,
-            gzipped
+            gzipped,
+            contentType
         )
     }
 
@@ -122,7 +149,8 @@ private fun createBody(connection: HttpURLConnection): Response.Body {
         return HttpUrlConnectionBody(
             connection,
             connection.errorStream,
-            gzipped
+            gzipped,
+            contentType
         )
     }
 
@@ -134,8 +162,9 @@ private class EmptyBody : Response.Body("".byteInputStream())
 private class HttpUrlConnectionBody(
     private val connection: HttpURLConnection,
     stream: InputStream,
-    gzipped: Boolean
-) : Response.Body(if (gzipped) GZIPInputStream(stream) else stream) {
+    gzipped: Boolean,
+    contentType: String?
+) : Response.Body(if (gzipped) GZIPInputStream(stream) else stream, contentType) {
     override fun close() {
         super.close()
 

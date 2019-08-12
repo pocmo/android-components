@@ -10,61 +10,67 @@ import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.support.annotation.VisibleForTesting
-import android.support.annotation.VisibleForTesting.PRIVATE
-import android.support.v4.app.Fragment
-import android.support.v4.app.FragmentManager
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.PRIVATE
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.engine.prompt.Choice
 import mozilla.components.concept.engine.prompt.PromptRequest
-import mozilla.components.concept.engine.prompt.PromptRequest.TextPrompt
-import mozilla.components.concept.engine.prompt.PromptRequest.Color
-import mozilla.components.concept.engine.prompt.PromptRequest.Authentication
 import mozilla.components.concept.engine.prompt.PromptRequest.Alert
+import mozilla.components.concept.engine.prompt.PromptRequest.Authentication
+import mozilla.components.concept.engine.prompt.PromptRequest.Color
+import mozilla.components.concept.engine.prompt.PromptRequest.File
+import mozilla.components.concept.engine.prompt.PromptRequest.MenuChoice
 import mozilla.components.concept.engine.prompt.PromptRequest.MultipleChoice
 import mozilla.components.concept.engine.prompt.PromptRequest.SingleChoice
-import mozilla.components.concept.engine.prompt.PromptRequest.MenuChoice
-import mozilla.components.concept.engine.prompt.PromptRequest.File
-import mozilla.components.feature.prompts.ChoiceDialogFragment.Companion.MULTIPLE_CHOICE_DIALOG_TYPE
+import mozilla.components.concept.engine.prompt.PromptRequest.TextPrompt
+import mozilla.components.concept.engine.prompt.PromptRequest.TimeSelection
 import mozilla.components.feature.prompts.ChoiceDialogFragment.Companion.MENU_CHOICE_DIALOG_TYPE
+import mozilla.components.feature.prompts.ChoiceDialogFragment.Companion.MULTIPLE_CHOICE_DIALOG_TYPE
 import mozilla.components.feature.prompts.ChoiceDialogFragment.Companion.SINGLE_CHOICE_DIALOG_TYPE
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.support.ktx.android.content.isPermissionGranted
 import java.security.InvalidParameterException
-import mozilla.components.concept.engine.prompt.PromptRequest.TimeSelection
-
 import java.util.Date
 
 @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
 internal const val FRAGMENT_TAG = "mozac_feature_prompt_dialog"
 
-typealias OnNeedToRequestPermissions = (session: Session, permissions: Array<String>, requestCode: Int) -> Unit
+typealias OnNeedToRequestPermissions = (permissions: Array<String>) -> Unit
 
 /**
- * Feature for displaying native dialogs for html elements like:
- * input type date,file,time,color, option, menu, authentication, confirmation and other alerts.
+ * Feature for displaying native dialogs for html elements like: input type
+ * date, file, time, color, option, menu, authentication, confirmation and alerts.
  *
- * There are some requests that are not handled with dialogs instead with intents like file choosers and others.
- * For this reason, you have to keep the feature aware of flow of requesting data from other apps, overriding
- * onActivityResult on your [Activity] or [Fragment] and forward its calls to [onActivityResult].
+ * There are some requests that are handled with intents instead of dialogs,
+ * like file choosers and others. For this reason, you have to keep the feature
+ * aware of the flow of requesting data from other apps, overriding
+ * onActivityResult in your [Activity] or [Fragment] and forward its calls
+ * to [onActivityResult].
  *
- * This feature will subscribe to the currently selected [Session] and display a suitable native dialog based on
- * [Session.Observer.onPromptRequested] events. Once the dialog is closed or the user selects an item from the dialog
- * the related [PromptFeature] will be consumed.
+ * This feature will subscribe to the currently selected [Session] and display
+ * a suitable native dialog based on [Session.Observer.onPromptRequested] events.
+ * Once the dialog is closed or the user selects an item from the dialog
+ * the related [PromptRequest] will be consumed.
  *
- * @property activity The [Activity] host of this feature, if the host is a [Fragment], just ignore this parameter
- * and pass a [fragment] parameter. Never [fragment] and [activity] should be both null or you will get
- * an [IllegalStateException].
- * @property fragment The [Fragment] host of this feature, if the host is an [Activity], just ignore this parameter
- * and pass [activity] parameter. Never [fragment] and [activity] should be both null or you will get
- * an [IllegalStateException].
- * @property sessionManager The [Fragment] instance in order to subscribe to the selected [Session].
- * @property fragmentManager The [FragmentManager] to be used when displaying a dialog (fragment).
- * @property onNeedToRequestPermissions A callback to let you know that there are some permissions that need to be
- * granted before performing a [PromptRequest]. You are in change of requesting these permissions and notify the feature
- * calling [onRequestPermissionsResult] method.
+ * @property activity The [Activity] which hosts this feature. If hosted by a
+ * [Fragment], this parameter can be ignored. Note that an
+ * [IllegalStateException] will be thrown if neither an active nor a fragment
+ * is specified.
+ * @property fragment The [Fragment] which hosts this feature. If hosted by an
+ * [Activity], this parameter can be ignored. Note that an
+ * [IllegalStateException] will be thrown if neither an active nor a fragment
+ * is specified.
+ * @property sessionManager The [SessionManager] instance in order to subscribe
+ * to the selected [Session].
+ * @property fragmentManager The [FragmentManager] to be used when displaying
+ * a dialog (fragment).
+ * @property onNeedToRequestPermissions a callback invoked when permissions
+ * need to be requested before a prompt (e.g. a file picker) can be displayed.
+ * Once the request is completed, [onPermissionsResult] needs to be invoked.
  */
 
 @Suppress("TooManyFunctions")
@@ -72,9 +78,9 @@ class PromptFeature(
     private val activity: Activity? = null,
     private val fragment: Fragment? = null,
     private val sessionManager: SessionManager,
+    private var sessionId: String? = null,
     private val fragmentManager: FragmentManager,
     private val onNeedToRequestPermissions: OnNeedToRequestPermissions
-
 ) : LifecycleAwareFeature {
 
     init {
@@ -91,10 +97,11 @@ class PromptFeature(
     private val context get() = activity ?: requireNotNull(fragment).requireContext()
 
     /**
-     * Start observing the selected session and when needed show native dialogs.
+     * Starts observing the selected session to listen for prompt requests
+     * and displays a dialog when needed.
      */
     override fun start() {
-        observer.observeSelected()
+        observer.observeIdOrSelected(sessionId)
 
         fragmentManager.findFragmentByTag(FRAGMENT_TAG)?.let { fragment ->
             // There's still a [PromptDialogFragment] visible from the last time. Re-attach this feature so that the
@@ -105,21 +112,21 @@ class PromptFeature(
     }
 
     /**
-     * Stop observing the selected session incoming onPromptRequested events.
+     * Stops observing the selected session for incoming prompt requests.
      */
     override fun stop() {
         observer.stop()
     }
 
     /**
-     * Forward the calls to onActivityResult on your [Activity] or [Fragment], to let the feature know, the results
-     * of intents for handling prompt requests, that need to be performed by other apps like file chooser requests.
+     * Notifies the feature of intent results for prompt requests handled by
+     * other apps like file chooser requests.
      *
      * @param requestCode The code of the app that requested the intent.
      * @param intent The result of the request.
      */
     fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
-        if (requestCode == FILE_PICKER_REQUEST) {
+        if (requestCode == FILE_PICKER_ACTIVITY_REQUEST_CODE) {
             sessionManager.selectedSession?.promptRequest?.consume {
 
                 val request = it as File
@@ -135,30 +142,28 @@ class PromptFeature(
     }
 
     /**
-     * Forward the calls to onRequestPermissionsResult on your [Activity] or [Fragment], to let the feature know,
-     * the results for the requested permissions that are needed for performing a [PromptRequest].
+     * Notifies the feature that the permissions request was completed. It will then
+     * either process or dismiss the prompt request.
      *
-     * @param requestCode The code of the app that requested the intent.
      * @param permissions List of permission requested.
+     * @param grantResults The grant results for the corresponding permissions
      * @see [onNeedToRequestPermissions].
      */
-    fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when (requestCode) {
-            FILE_PICKER_REQUEST -> {
-                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    onPermissionsGranted()
-                } else {
-                    onPermissionsDeny()
-                }
-            }
+    fun onPermissionsResult(permissions: Array<String>, grantResults: IntArray) {
+        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            onPermissionsGranted()
+        } else {
+            onPermissionsDenied()
         }
     }
 
     /**
-     * Use in conjunction with [onNeedToRequestPermissions], to notify the feature that all the required permissions
-     * have been granted, and it can perform the pending [PromptRequest] in the selected session.
+     * Used in conjunction with [onNeedToRequestPermissions], to notify the feature
+     * that all the required permissions have been granted, and the pending [PromptRequest]
+     * can be performed.
      *
-     * If the required permission has not been completely granted [onNeedToRequestPermissions] will be called.
+     * If the required permission has not been granted
+     * [onNeedToRequestPermissions] will be called.
      */
     @VisibleForTesting(otherwise = PRIVATE)
     internal fun onPermissionsGranted() {
@@ -171,11 +176,11 @@ class PromptFeature(
     }
 
     /**
-     * Use in conjunction with [onNeedToRequestPermissions] to notify the feature that one or more required permissions
-     * have been denied.
+     * Used in conjunction with [onNeedToRequestPermissions] to notify the feature that one
+     * or more required permissions have been denied.
      */
     @VisibleForTesting(otherwise = PRIVATE)
-    internal fun onPermissionsDeny() {
+    internal fun onPermissionsDenied() {
         sessionManager.selectedSession?.apply {
             promptRequest.consume { request ->
                 if (request is File) {
@@ -193,7 +198,7 @@ class PromptFeature(
     ) {
         intent.apply {
 
-            if (request.isMultipleFilesSelection) {
+            if (intent.clipData != null && request.isMultipleFilesSelection) {
                 handleMultipleFileSelections(request, this)
             } else {
                 handleSingleFileSelection(request, this)
@@ -216,15 +221,15 @@ class PromptFeature(
         request: File,
         intent: Intent
     ) {
-        intent.clipData?.apply {
+        intent.clipData?.run {
             val uris = Array<Uri>(itemCount) { index -> getItemAt(index).uri }
             request.onMultipleFilesSelected(context, uris)
         }
     }
 
     /**
-     * Event that is triggered when a native dialog needs to be shown.
-     * Displays suitable dialog for the type of the [promptRequest].
+     * Invoked when a native dialog needs to be shown.
+     * Displays a suitable dialog for the pending [promptRequest].
      *
      * @param session The session which requested the dialog.
      * @param promptRequest The session the request the dialog.
@@ -235,7 +240,7 @@ class PromptFeature(
         // Requests that are handle with intents
         when (promptRequest) {
             is File -> {
-                handleFilePickerRequest(promptRequest, session)
+                handleFilePickerRequest(promptRequest)
                 return
             }
         }
@@ -243,8 +248,9 @@ class PromptFeature(
     }
 
     /**
-     * Event that is called when a dialog is dismissed.
-     * This consumes the [PromptFeature] value from the [Session] indicated by [sessionId].
+     * Invoked when a dialog is dismissed. This consumes the [PromptFeature]
+     * value from the [Session] indicated by [sessionId].
+     *
      * @param sessionId this is the id of the session which requested the prompt.
      */
     internal fun onCancel(sessionId: String) {
@@ -255,19 +261,22 @@ class PromptFeature(
                 is Authentication -> it.onDismiss()
                 is Color -> it.onDismiss()
                 is TextPrompt -> it.onDismiss()
+                is PromptRequest.Popup -> it.onDeny()
+                is PromptRequest.Confirm -> it.onDismiss()
             }
             true
         }
     }
 
     /**
-     * Event that is called when the user confirm the action on the dialog.
-     * This consumes the [PromptFeature] value from the [Session] indicated by [sessionId].
+     * Invoked when the user confirms the action on the dialog. This consumes
+     * the [PromptFeature] value from the [Session] indicated by [sessionId].
+     *
      * @param sessionId that requested to show the dialog.
      * @param value an optional value provided by the dialog as a result of confirming the action.
      */
-    @Suppress("UNCHECKED_CAST")
-    internal fun onConfirm(sessionId: String, value: Any) {
+    @Suppress("UNCHECKED_CAST", "ComplexMethod")
+    internal fun onConfirm(sessionId: String, value: Any? = null) {
         val session = sessionManager.findSessionById(sessionId) ?: return
         session.promptRequest.consume {
             when (it) {
@@ -276,6 +285,7 @@ class PromptFeature(
                 is Alert -> it.onConfirm(value as Boolean)
                 is SingleChoice -> it.onConfirm(value as Choice)
                 is MenuChoice -> it.onConfirm(value as Choice)
+                is PromptRequest.Popup -> it.onAllow()
 
                 is MultipleChoice -> {
                     it.onConfirm(value as Array<Choice>)
@@ -290,14 +300,31 @@ class PromptFeature(
                     val pair = value as Pair<Boolean, String>
                     it.onConfirm(pair.first, pair.second)
                 }
+
+                is PromptRequest.Confirm -> {
+                    val pair = value as Pair<Boolean, MultiButtonDialogFragment.ButtonType>
+                    when (pair.second) {
+
+                        MultiButtonDialogFragment.ButtonType.POSITIVE -> {
+                            it.onConfirmPositiveButton(pair.first)
+                        }
+                        MultiButtonDialogFragment.ButtonType.NEGATIVE -> {
+                            it.onConfirmNegativeButton(pair.first)
+                        }
+                        MultiButtonDialogFragment.ButtonType.NEUTRAL -> {
+                            it.onConfirmNeutralButton(pair.first)
+                        }
+                    }
+                }
             }
             true
         }
     }
 
     /**
-     * Event that is called when the user is requesting to clear the selected value from the dialog.
+     * Invoked when the user is requesting to clear the selected value from the dialog.
      * This consumes the [PromptFeature] value from the [Session] indicated by [sessionId].
+     *
      * @param sessionId that requested to show the dialog.
      */
     internal fun onClear(sessionId: String) {
@@ -311,7 +338,7 @@ class PromptFeature(
     }
 
     /**
-     * Re-attach a fragment that is still visible but not linked to this feature anymore.
+     * Re-attaches a fragment that is still visible but not linked to this feature anymore.
      */
     private fun reattachFragment(fragment: PromptDialogFragment) {
         val session = sessionManager.findSessionById(fragment.sessionId)
@@ -326,18 +353,15 @@ class PromptFeature(
         fragment.feature = this
     }
 
-    internal fun handleFilePickerRequest(
-        promptRequest: File,
-        session: Session
-    ) {
+    internal fun handleFilePickerRequest(promptRequest: File) {
         if (context.isPermissionGranted(READ_EXTERNAL_STORAGE)) {
             val intent = buildFileChooserIntent(
                 promptRequest.isMultipleFilesSelection,
                 promptRequest.mimeTypes
             )
-            startActivityForResult(intent, FILE_PICKER_REQUEST)
+            startActivityForResult(intent, FILE_PICKER_ACTIVITY_REQUEST_CODE)
         } else {
-            onNeedToRequestPermissions(session, arrayOf(READ_EXTERNAL_STORAGE), FILE_PICKER_REQUEST)
+            onNeedToRequestPermissions(arrayOf(READ_EXTERNAL_STORAGE))
         }
     }
 
@@ -436,6 +460,37 @@ class PromptFeature(
                 }
             }
 
+            is PromptRequest.Popup -> {
+                val title = context.getString(R.string.mozac_feature_prompts_popup_dialog_title)
+                val positiveLabel = context.getString(R.string.mozac_feature_prompts_allow)
+                val negativeLabel = context.getString(R.string.mozac_feature_prompts_deny)
+
+                with(promptRequest) {
+                    ConfirmDialogFragment.newInstance(
+                        sessionId = session.id,
+                        title = title,
+                        message = targetUri,
+                        positiveButtonText = positiveLabel,
+                        negativeButtonText = negativeLabel
+                    )
+                }
+            }
+
+            is PromptRequest.Confirm -> {
+
+                with(promptRequest) {
+                    MultiButtonDialogFragment.newInstance(
+                        session.id,
+                        title,
+                        message,
+                        hasShownManyDialogs,
+                        positiveButtonTitle,
+                        negativeButtonTitle,
+                        neutralButtonTitle
+                    )
+                }
+            }
+
             else -> {
                 throw InvalidParameterException("Not valid prompt request type")
             }
@@ -446,8 +501,8 @@ class PromptFeature(
     }
 
     /**
-     * Observes [Session.Observer.onPromptRequested] of the selected session and notifies the feature whenever a prompt
-     * needs to be shown.
+     * Observes [Session.Observer.onPromptRequested] of the selected session
+     * and notifies the feature whenever a prompt needs to be shown.
      */
     internal class PromptRequestObserver(
         sessionManager: SessionManager,
@@ -461,6 +516,6 @@ class PromptFeature(
     }
 
     companion object {
-        const val FILE_PICKER_REQUEST = 1234
+        const val FILE_PICKER_ACTIVITY_REQUEST_CODE = 1234
     }
 }

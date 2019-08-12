@@ -4,7 +4,6 @@
 
 package mozilla.components.browser.engine.servo
 
-import android.graphics.Bitmap
 import android.net.Uri
 import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.EngineSession
@@ -144,8 +143,8 @@ class ServoEngineSession(
         // not implemented yet
     }
 
-    override fun captureThumbnail(): Bitmap? {
+    override fun recoverFromCrash(): Boolean {
         // not implemented yet
-        return null
+        return false
     }
 }

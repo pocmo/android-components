@@ -1,7 +1,6 @@
 package mozilla.components.browser.engine.system
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
@@ -22,7 +21,6 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.support.test.mock
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -32,6 +30,7 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
@@ -57,7 +56,7 @@ class SystemEngineSessionTest {
             override fun onProgress(progress: Int) { observedProgress = progress }
         })
 
-        engineSession.webView.webChromeClient.onProgressChanged(null, 100)
+        engineSession.webView.webChromeClient!!.onProgressChanged(null, 100)
         assertEquals(100, observedProgress)
     }
 
@@ -258,6 +257,7 @@ class SystemEngineSessionTest {
     }
 
     @Test
+    @Suppress("Deprecation")
     fun initSettings() {
         val engineSession = spy(SystemEngineSession(getApplicationContext()))
         assertNotNull(engineSession.internalSettings)
@@ -351,10 +351,11 @@ class SystemEngineSessionTest {
         verify(webViewSettings).savePassword = false
         verify(webViewSettings).saveFormData = false
         verify(webViewSettings).builtInZoomControls = true
+        verify(webViewSettings).displayZoomControls = false
     }
 
     @Test
-    fun defaultSettings() {
+    fun withProvidedDefaultSettings() {
         val defaultSettings = DefaultSettings(
                 javascriptEnabled = false,
                 domStorageEnabled = false,
@@ -363,24 +364,25 @@ class SystemEngineSessionTest {
                 userAgentString = "userAgent",
                 mediaPlaybackRequiresUserGesture = false,
                 javaScriptCanOpenWindowsAutomatically = true,
-                displayZoomControls = false,
+                displayZoomControls = true,
                 loadWithOverviewMode = true,
                 supportMultipleWindows = true)
         val engineSession = spy(SystemEngineSession(getApplicationContext(), defaultSettings))
+
         val webView = mock(WebView::class.java)
         `when`(webView.context).thenReturn(getApplicationContext())
-        engineSession.webView = webView
 
         val webViewSettings = mock(WebSettings::class.java)
         `when`(webView.settings).thenReturn(webViewSettings)
 
-        engineSession.initSettings()
+        engineSession.webView = webView
+
         verify(webViewSettings).domStorageEnabled = false
         verify(webViewSettings).javaScriptEnabled = false
         verify(webViewSettings).userAgentString = "userAgent"
         verify(webViewSettings).mediaPlaybackRequiresUserGesture = false
         verify(webViewSettings).javaScriptCanOpenWindowsAutomatically = true
-        verify(webViewSettings).displayZoomControls = false
+        verify(webViewSettings).displayZoomControls = true
         verify(webViewSettings).loadWithOverviewMode = true
         verify(webViewSettings).setSupportMultipleWindows(true)
         verify(engineSession).enableTrackingProtection(EngineSession.TrackingProtectionPolicy.all())
@@ -435,9 +437,68 @@ class SystemEngineSessionTest {
 
         assertNotNull(response)
 
-        assertEquals("<h1>Hello World</h1>", response.data.bufferedReader().use { it.readText() })
+        assertEquals("<h1>Hello World</h1>", response!!.data.bufferedReader().use { it.readText() })
         assertEquals("text/html", response.mimeType)
         assertEquals("UTF-8", response.encoding)
+    }
+
+    @Test
+    fun `shouldInterceptRequest notifies observers if request was not intercepted`() {
+        val request: WebResourceRequest = mock()
+        doReturn(true).`when`(request).isForMainFrame
+        doReturn(true).`when`(request).hasGesture()
+        doReturn(Uri.parse("sample:about")).`when`(request).url
+
+        val engineSession = SystemEngineSession(getApplicationContext())
+        engineSession.webView = spy(engineSession.webView)
+        val engineView = SystemEngineView(getApplicationContext())
+        engineView.render(engineSession)
+
+        val observer: EngineSession.Observer = mock()
+        engineSession.register(observer)
+
+        engineSession.webView.webViewClient.shouldInterceptRequest(engineSession.webView, request)
+
+        verify(observer).onLoadRequest(true)
+
+        val redirect: WebResourceRequest = mock()
+        doReturn(true).`when`(redirect).isForMainFrame
+        doReturn(false).`when`(redirect).hasGesture()
+        doReturn(Uri.parse("sample:about")).`when`(redirect).url
+
+        engineSession.webView.webViewClient.shouldInterceptRequest(engineSession.webView, redirect)
+
+        verify(observer).onLoadRequest(false)
+    }
+
+    @Test
+    fun `shouldInterceptRequest does not notify observers if request was intercepted`() {
+        val request: WebResourceRequest = mock()
+        doReturn(true).`when`(request).isForMainFrame
+        doReturn(true).`when`(request).hasGesture()
+        doReturn(Uri.parse("sample:about")).`when`(request).url
+
+        val interceptor = object : RequestInterceptor {
+            override fun onLoadRequest(session: EngineSession, uri: String): RequestInterceptor.InterceptionResponse? {
+                return RequestInterceptor.InterceptionResponse.Content("<h1>Hello World</h1>")
+            }
+        }
+
+        val defaultSettings = DefaultSettings(requestInterceptor = interceptor)
+
+        val engineSession = SystemEngineSession(getApplicationContext(), defaultSettings)
+        engineSession.webView = spy(engineSession.webView)
+        val engineView = SystemEngineView(getApplicationContext())
+        engineView.render(engineSession)
+
+        val observer: EngineSession.Observer = mock()
+        engineSession.register(observer)
+
+        engineSession.webView.webViewClient.shouldInterceptRequest(
+            engineSession.webView,
+            request)
+
+        verify(observer, never()).onLoadRequest(anyBoolean())
     }
 
     @Test
@@ -520,47 +581,47 @@ class SystemEngineSessionTest {
 
     @Test
     fun webViewErrorMappingToErrorType() {
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_UNKNOWN_HOST,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_HOST_LOOKUP)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_CONNECTION_REFUSED,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_CONNECT)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_CONNECTION_REFUSED,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_IO)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_NET_TIMEOUT,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_TIMEOUT)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_REDIRECT_LOOP,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_REDIRECT_LOOP)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_UNKNOWN_PROTOCOL,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_UNSUPPORTED_SCHEME)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_SECURITY_SSL,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_FAILED_SSL_HANDSHAKE)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_MALFORMED_URI,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_BAD_URL)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.UNKNOWN,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_TOO_MANY_REQUESTS)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.ERROR_FILE_NOT_FOUND,
             SystemEngineSession.webViewErrorToErrorType(WebViewClient.ERROR_FILE_NOT_FOUND)
         )
-        Assert.assertEquals(
+        assertEquals(
             ErrorType.UNKNOWN,
             SystemEngineSession.webViewErrorToErrorType(-500)
         )
@@ -672,17 +733,6 @@ class SystemEngineSessionTest {
     }
 
     @Test
-    fun captureThumbnail() {
-        val engineSession = spy(SystemEngineSession(getApplicationContext()))
-        val webView = mock(WebView::class.java)
-        engineSession.webView = webView
-        assertNull(engineSession.captureThumbnail())
-
-        `when`(webView.drawingCache).thenReturn(Bitmap.createBitmap(10, 10, Bitmap.Config.RGB_565))
-        assertNotNull(engineSession.captureThumbnail())
-    }
-
-    @Test
     fun testExitFullscreenModeWithWebViewAndCallBack() {
         val engineSession = SystemEngineSession(getApplicationContext())
         val engineView = SystemEngineView(getApplicationContext())
@@ -695,5 +745,26 @@ class SystemEngineSessionTest {
         engineSession.fullScreenCallback = customViewCallback
         engineSession.exitFullScreenMode()
         verify(customViewCallback).onCustomViewHidden()
+    }
+
+    @Test
+    fun closeDestroysWebView() {
+        val engineSession = SystemEngineSession(getApplicationContext())
+        val webView = mock(WebView::class.java)
+        engineSession.webView = webView
+
+        engineSession.close()
+        verify(webView).destroy()
+    }
+
+    @Test
+    fun `recoverFromCrash does not restore state`() {
+        val engineSession = SystemEngineSession(getApplicationContext())
+        val webView = mock(WebView::class.java)
+        engineSession.webView = webView
+
+        assertFalse(engineSession.recoverFromCrash())
+
+        verify(webView, never()).restoreState(any())
     }
 }

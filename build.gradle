@@ -1,10 +1,10 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
-buildscript {
-    ext.geckoRelease = [
-        revision: '84219fbf133cacfc6e31c9471ad20ee7162a02af',
-    ]
+import org.gradle.internal.logging.text.StyledTextOutput.Style
+import org.gradle.internal.logging.text.StyledTextOutputFactory
+import static org.gradle.api.tasks.testing.TestResult.ResultType
 
+buildscript {
     repositories {
         google()
         jcenter()
@@ -14,9 +14,7 @@ buildscript {
         classpath Dependencies.tools_androidgradle
         classpath Dependencies.tools_kotlingradle
         classpath Dependencies.tools_dokka
-
-        // Publish.
-        classpath Dependencies.tools_mavengradle
+        classpath Dependencies.tools_androidmavenpublish
     }
 }
 
@@ -47,6 +45,13 @@ subprojects {
     apply plugin: 'jacoco'
     apply plugin: 'org.jetbrains.dokka-android'
 
+    // Enable Kotlin warnings as errors. We should work to enable this on all modules (#2346).
+    if (!KotlinCompiler.projectsWithWarningsAsErrorsDisabled.contains(project.name)) {
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+            kotlinOptions.allWarningsAsErrors = true
+        }
+    }
+
     // Enforce that all (transitive) dependencies are using the same support library version as we do.
     project.configurations.all {
         resolutionStrategy.eachDependency { details ->
@@ -60,7 +65,49 @@ subprojects {
     afterEvaluate {
         if (it.hasProperty('android')) {
             jacoco {
-                toolVersion = "0.8.2"
+                toolVersion = "0.8.4"
+            }
+
+            // Format test output
+            tasks.matching {it instanceof Test}.all {
+                systemProperty "robolectric.logging", "stdout"
+                systemProperty "logging.test-mode", "true"
+
+                testLogging.events = []
+
+                def out = services.get(StyledTextOutputFactory).create("an-ouput")
+
+                beforeSuite { descriptor ->
+                    if (descriptor.getClassName() != null) {
+                        out.style(Style.Header).println("\nSUITE: " + descriptor.getClassName())
+                    }
+                }
+
+                beforeTest { descriptor ->
+                    out.style(Style.Description).println("  TEST: " + descriptor.getName())
+                }
+
+                onOutput { descriptor, event ->
+                    logger.lifecycle("    " + event.message.trim())
+                }
+
+                afterTest { descriptor, result ->
+                    switch (result.getResultType()) {
+                        case ResultType.SUCCESS:
+                            out.style(Style.Success).println("  SUCCESS")
+                            break
+
+                        case ResultType.FAILURE:
+                            out.style(Style.Failure).println("  FAILURE")
+                            logger.lifecycle("", result.getException())
+                            break
+
+                        case ResultType.SKIPPED:
+                            out.style(Style.Info).println("  SKIPPED")
+                            break
+                    }
+                    logger.lifecycle("")
+                }
             }
 
             dependencies {
@@ -76,14 +123,27 @@ subprojects {
 
                 lintOptions {
                     warningsAsErrors true
-                    abortOnError true
+                    abortOnError (project.name != "support-test")
+
+                    // With our L10N process its totally possible to have missing or (temporarily) extra translations.
+                    disable 'MissingTranslation', 'ExtraTranslation'
+                }
+
+                packagingOptions {
+                    exclude 'META-INF/atomicfu.kotlin_module'
+                }
+
+                compileOptions {
+                    sourceCompatibility 1.8
+                    targetCompatibility 1.8
                 }
             }
 
             if (project.hasProperty("coverage") && project.name != "support-test") {
                 tasks.withType(Test) {
                     jacoco.includeNoLocationClasses = true
-                    doLast { jacocoTestReport.execute() }
+
+                    finalizedBy jacocoTestReport
                 }
 
                 task jacocoTestReport(type: JacocoReport) {
@@ -122,7 +182,7 @@ evaluationDependsOnChildren()
 task docs(type: org.jetbrains.dokka.gradle.DokkaAndroidTask, overwrite: true) {
     moduleName = "$rootProject.name"
     outputDirectory = "$buildDir/javadoc"
-    outputFormat = "html"
+    outputFormat = "gfm"
     jdkVersion = 7
 
     subprojects.findAll {
@@ -132,6 +192,10 @@ task docs(type: org.jetbrains.dokka.gradle.DokkaAndroidTask, overwrite: true) {
         it.android.libraryVariants.all { variant ->
             classpath += files(variant.javaCompile.classpath.files)
         }
+    }
+
+    externalDocumentationLink {
+        url = new URL("https://mozilla.github.io/geckoview/javadoc/mozilla-central/package-list")
     }
 
     sourceDirs = files(subprojects.findAll {
@@ -149,7 +213,6 @@ task docs(type: org.jetbrains.dokka.gradle.DokkaAndroidTask, overwrite: true) {
         return path
     })
 }
-
 
 task clean(type: Delete) {
     delete rootProject.buildDir
@@ -177,7 +240,7 @@ configurations {
 }
 
 dependencies {
-    ktlint "com.github.shyiko:ktlint:0.29.0"
+    ktlint "com.github.shyiko:ktlint:0.31.0"
 }
 
 task ktlint(type: JavaExec, group: "verification") {
@@ -187,5 +250,5 @@ task ktlint(type: JavaExec, group: "verification") {
     args "components/**/*.kt" , "samples/**/*.kt", "!**/build", "buildSrc/**/*.kt"
 }
 
-apply plugin: GVNightlyVersionVerifierPlugin
+apply plugin: GVVersionVerifierPlugin
 apply plugin: GitHubPlugin

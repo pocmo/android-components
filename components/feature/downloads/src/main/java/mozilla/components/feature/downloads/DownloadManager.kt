@@ -16,13 +16,17 @@ import android.content.Context.DOWNLOAD_SERVICE
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
-import android.support.annotation.RequiresPermission
+import android.widget.Toast
+import androidx.annotation.RequiresPermission
 import mozilla.components.browser.session.Download
+import mozilla.components.support.ktx.android.content.appName
 import mozilla.components.support.ktx.android.content.isPermissionGranted
 import mozilla.components.support.utils.DownloadUtils
 
 typealias OnDownloadCompleted = (Download, Long) -> Unit
 typealias AndroidDownloadManager = android.app.DownloadManager
+
+internal const val FILE_NOT_SUPPORTED = -1L
 
 /**
  * Handles the interactions with the [AndroidDownloadManager].
@@ -45,12 +49,20 @@ class DownloadManager(
      * @param cookie any additional cookie to add as part of the download request.
      * @return the id reference of the scheduled download.
      */
-    @RequiresPermission(allOf = arrayOf(INTERNET, WRITE_EXTERNAL_STORAGE))
+    @RequiresPermission(allOf = [INTERNET, WRITE_EXTERNAL_STORAGE])
     fun download(
         download: Download,
         refererURL: String = "",
         cookie: String = ""
     ): Long {
+
+        if (download.isSupportedProtocol()) {
+            // We are ignoring everything that is not http or https. This is a limitation of
+            // Android's download manager. There's no reason to show a download dialog for
+            // something we can't download anyways.
+            showUnSupportFileErrorMessage()
+            return FILE_NOT_SUPPORTED
+        }
 
         if (!applicationContext.isPermissionGranted(INTERNET, WRITE_EXTERNAL_STORAGE)) {
             throw SecurityException("You must be granted INTERNET and WRITE_EXTERNAL_STORAGE permissions")
@@ -62,15 +74,15 @@ class DownloadManager(
 
         val request = Request(Uri.parse(download.url))
             .setNotificationVisibility(VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setMimeType(download.contentType)
-            .addRequestHeader("User-Agent", download.userAgent)
 
-        if (cookie.isNotEmpty()) {
-            request.addRequestHeader("Cookie", cookie)
+        if (!download.contentType.isNullOrEmpty()) {
+            request.setMimeType(download.contentType)
         }
 
-        if (refererURL.isNotEmpty()) {
-            request.addRequestHeader("Referer", refererURL)
+        with(request) {
+            addRequestHeaderSafely("User-Agent", download.userAgent)
+            addRequestHeaderSafely("Cookie", cookie)
+            addRequestHeaderSafely("Referer", refererURL)
         }
 
         request.setDestinationInExternalPublicDir(download.destinationDirectory, fileName)
@@ -103,7 +115,7 @@ class DownloadManager(
     }
 
     private fun getFileName(download: Download): String? {
-        return if (!download.fileName.isNullOrEmpty()) {
+        return if (!download.fileName.isEmpty()) {
             download.fileName
         } else {
             DownloadUtils.guessFileName(
@@ -137,4 +149,25 @@ class DownloadManager(
             }
         }
     }
+
+    private fun Download.isSupportedProtocol(): Boolean {
+        val scheme = Uri.parse(url.trim()).scheme
+        return (scheme == null || scheme != "http" && scheme != "https")
+    }
+
+    private fun showUnSupportFileErrorMessage() {
+        val text = applicationContext.getString(
+            R.string.mozac_feature_downloads_file_not_supported2,
+            applicationContext.appName)
+
+        Toast.makeText(applicationContext, text, Toast.LENGTH_LONG)
+            .show()
+    }
+}
+
+internal fun Request.addRequestHeaderSafely(name: String, value: String?) {
+    if (value.isNullOrEmpty()) {
+        return
+    }
+    addRequestHeader(name, value)
 }

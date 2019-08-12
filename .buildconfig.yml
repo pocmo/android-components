@@ -1,4 +1,4 @@
-componentsVersion: 0.39.0
+componentsVersion: 0.54.0
 projects:
   concept-awesomebar:
     path: components/concept/awesomebar
@@ -20,13 +20,25 @@ projects:
     path: components/concept/engine
     description: 'An abstract layer hiding the actual browser engine implementation.'
     publish: true
+  concept-push:
+    path: components/concept/push
+    description: 'An abstract definition of a push service component.'
+    publish: true
   concept-storage:
     path: components/concept/storage
     description: 'An abstract definition of a browser storage layer.'
     publish: true
+  concept-sync:
+    path: components/concept/sync
+    description: 'An abstract definition of a browser data synchronization layer.'
+    publish: true
   feature-awesomebar:
     path: components/feature/awesomebar
     description: 'Component connecting a concept-toolbar with a concept-awesomebar.'
+    publish: true
+  feature-accounts:
+    path: components/feature/accounts
+    description: 'Component for tying an account manager with the tabs feature to facilitate auth flows.'
     publish: true
   feature-contextmenu:
     path: components/feature/contextmenu
@@ -39,6 +51,14 @@ projects:
   feature-intent:
     path: components/feature/intent
     description: 'Combining various feature components for intent processing.'
+    publish: true
+  feature-media:
+    path: components/feature/media
+    description: 'Feature component for website media related features.'
+    publish: true
+  feature-readerview:
+    path: components/feature/readerview
+    description: 'Feature implementation providing a Reader View WebExtension.'
     publish: true
   feature-search:
     path: components/feature/search
@@ -60,6 +80,10 @@ projects:
     path: components/feature/tabs
     description: 'Feature implementation connecting a tabs tray implementation with the session and toolbar modules.'
     publish: true
+  feature-tab-collections:
+    path: components/feature/tab-collections
+    description: 'Feature implementation for saving, restoring and organizing collections of tabs.'
+    publish: true
   feature-toolbar:
     path: components/feature/toolbar
     description: 'Feature implementation connecting a toolbar implementation with the session module.'
@@ -71,6 +95,22 @@ projects:
   feature-prompts:
     path: components/feature/prompts
     description: 'Feature that will subscribe to the selected session and will handle all the common prompt dialogs from web content.'
+    publish: true
+  feature-pwa:
+    path: components/feature/pwa
+    description: 'Feature implementation for Progressive Web Apps (PWA).'
+    publish: true
+  feature-findinpage:
+    path: components/feature/findinpage
+    description: 'Feature that will subscribe to the selected session and show an UI for results of find in page.'
+    publish: true
+  feature-sitepermissions:
+    path: components/feature/sitepermissions
+    description: 'A feature for showing site permission request prompts.'
+    publish: true
+  feature-qr:
+    path: components/feature/qr
+    description: 'A feature that provides functionality for scanning QR codes.'
     publish: true
   browser-awesomebar:
     path: components/browser/awesomebar
@@ -104,6 +144,10 @@ projects:
     path: components/browser/errorpages
     description: 'Responsive browser error pages for Android apps.'
     publish: true
+  browser-icons:
+    path: components/browser/icons
+    description: 'A component for loading and storing website icons.'
+    publish: true
   browser-menu:
     path: components/browser/menu
     description: 'A customizable menu for browsers.'
@@ -116,6 +160,10 @@ projects:
     path: components/browser/session
     description: 'An abstract layer hiding the actual browser engine implementation.'
     publish: true
+  browser-state:
+    path: components/browser/state
+    description: 'Component responsible for maintaining the centralized state of a browser engine.'
+    publish: false
   browser-storage-memory:
     path: components/browser/storage-memory
     description: 'A memory-backed implementation of core data storage.'
@@ -139,6 +187,10 @@ projects:
   ui-colors:
     path: components/ui/colors
     description: 'The standard set of Photon colors.'
+    publish: true
+  ui-doorhanger:
+    path: components/ui/doorhanger
+    description: 'A generic floating heads-up popup that can be anchored to a view.'
     publish: true
   ui-fonts:
     path: components/ui/fonts
@@ -168,9 +220,17 @@ projects:
     path: components/service/fretboard
     description: 'An Android framework for segmenting users in order to run A/B tests and rollout features gradually.'
     publish: true
+  service-experiments:
+    path: components/service/experiments
+    description: 'An Android SDK for running experiments on user segments in multiple branches.'
+    publish: true
   service-glean:
     path: components/service/glean
     description: 'A client-side telemetry SDK for collecting metrics and sending them to the Mozilla telemetry service'
+    publish: true
+  service-pocket:
+    path: components/service/pocket
+    description: 'A library to communicate with the Pocket API'
     publish: true
   service-telemetry:
     path: components/service/telemetry
@@ -186,11 +246,19 @@ projects:
     publish: true
   support-test:
     path: components/support/test
-    description: 'A collection of helpers for testing components.'
+    description: 'A collection of helpers for testing components (local unit tests).'
+    publish: true
+  support-android-test:
+    path: components/support/android-test
+    description: 'A collection of helpers for testing components from instrumented (on device) tests.'
     publish: true
   support-utils:
     path: components/support/utils
     description: 'A collection of generic helper classes.'
+    publish: true
+  support-rustlog:
+    path: components/support/rustlog
+    description: 'A bridge allowing log messages from Rust code to be sent to the log system in support-base'
     publish: true
   lib-crash:
     path: components/lib/crash
@@ -211,6 +279,10 @@ projects:
   lib-jexl:
     path: components/lib/jexl
     description: 'Javascript Expression Language: Powerful context-based expression parser and evaluator.'
+    publish: true
+  lib-publicsuffixlist:
+    path: components/lib/publicsuffixlist
+    description: 'A library for reading and using the public suffix list.'
     publish: true
   tooling-lint:
     path: components/tooling/lint
@@ -236,9 +308,13 @@ projects:
     path: samples/glean
     description: 'An app demoing how to use the Glean library to collect and send telemetry data.'
     publish: false
-  samples-sync-history:
-    path: samples/sync-history
-    description: 'A simple app demoing Firefox Sync (History) integration.'
+  samples-glean-library:
+    path: samples/glean/samples-glean-library
+    description: 'A third-party library used by samples-glean to demonstrate multi-library support for Glean.'
+    publish: false
+  samples-sync:
+    path: samples/sync
+    description: 'A simple app demoing Firefox Sync (History, Bookmarks, etc) integration.'
     publish: false
   samples-sync-logins:
     path: samples/sync-logins
@@ -252,3 +328,4 @@ projects:
     path: samples/dataprotect
     description: 'An app demoing how to use the Dataprotect component to load and store encrypted data in SharedPreferences.'
     publish: false
+

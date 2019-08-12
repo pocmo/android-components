@@ -6,10 +6,14 @@ package mozilla.components.service.glean.storages
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
-import mozilla.components.service.glean.Lifetime
-import mozilla.components.service.glean.StringMetricType
+import mozilla.components.service.glean.error.ErrorRecording.ErrorType
+import mozilla.components.service.glean.error.ErrorRecording.testGetNumRecordedErrors
+import mozilla.components.service.glean.private.Lifetime
+import mozilla.components.service.glean.private.StringMetricType
+import mozilla.components.service.glean.resetGlean
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,14 +27,7 @@ class StringsStorageEngineTest {
 
     @Before
     fun setUp() {
-        StringsStorageEngine.applicationContext = ApplicationProvider.getApplicationContext()
-        // Clear the stored "user" preferences between tests.
-        ApplicationProvider.getApplicationContext<Context>()
-            .getSharedPreferences(StringsStorageEngine.javaClass.simpleName, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .apply()
-        StringsStorageEngine.clearAllStores()
+        resetGlean()
     }
 
     @Test
@@ -49,9 +46,15 @@ class StringsStorageEngineTest {
         val sharedPreferences = mock(SharedPreferences::class.java)
         `when`(sharedPreferences.all).thenAnswer { persistedSample }
         `when`(context.getSharedPreferences(
-            eq(storageEngine::class.java.simpleName),
+            eq(storageEngine::class.java.canonicalName),
             eq(Context.MODE_PRIVATE)
         )).thenReturn(sharedPreferences)
+        `when`(context.getSharedPreferences(
+            eq("${storageEngine::class.java.canonicalName}.PingLifetime"),
+            eq(Context.MODE_PRIVATE)
+        )).thenReturn(ApplicationProvider.getApplicationContext<Context>()
+            .getSharedPreferences("${storageEngine::class.java.canonicalName}.PingLifetime",
+                Context.MODE_PRIVATE))
 
         storageEngine.applicationContext = context
         val snapshot = storageEngine.getSnapshot(storeName = "store1", clearStore = true)
@@ -190,5 +193,27 @@ class StringsStorageEngineTest {
         // Check that this serializes to the expected JSON format.
         assertEquals("{\"telemetry.string_metric\":\"test_string_value\"}",
             snapshot.toString())
+    }
+
+    @Test
+    fun `The API truncates long string values`() {
+        // Define a 'stringMetric' string metric, which will be stored in "store1"
+        val stringMetric = StringMetricType(
+            disabled = false,
+            category = "telemetry",
+            lifetime = Lifetime.Application,
+            name = "string_metric",
+            sendInPings = listOf("store1")
+        )
+
+        stringMetric.set("0123456789012345678901234567890123456789012345678901234567890123456789")
+        // Check that data was truncated.
+        assertTrue(stringMetric.testHasValue())
+        assertEquals(
+            "01234567890123456789012345678901234567890123456789",
+            stringMetric.testGetValue()
+        )
+
+        assertEquals(1, testGetNumRecordedErrors(stringMetric, ErrorType.InvalidValue))
     }
 }

@@ -9,14 +9,13 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.org.json.toJSON
 
 import android.content.Context
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import org.json.JSONObject
 
 /**
  * This singleton handles the in-memory storage logic for keeping track of
  * the active experiments. It is meant to be used by through the methods in
- * the Glean class (General API). No validation on the stored data is
- * performed at this point: validation must be performed by the General API.
+ * the Glean class (General API).
  */
 @SuppressLint("StaticFieldLeak")
 internal object ExperimentsStorageEngine : StorageEngine {
@@ -26,11 +25,6 @@ internal object ExperimentsStorageEngine : StorageEngine {
 
     // Maximum length of the experiment and branch names, in characters.
     private const val MAX_ID_LENGTH = 30
-
-    data class RecordedExperimentData(
-        val branch: String,
-        val extra: Map<String, String>? = null
-    )
 
     private val experiments: MutableMap<String, RecordedExperimentData> = mutableMapOf()
 
@@ -136,8 +130,14 @@ internal object ExperimentsStorageEngine : StorageEngine {
     override val sendAsTopLevelField: Boolean
         get() = true
 
-    @VisibleForTesting
-    internal fun clearAllStores() {
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    override fun clearAllStores() {
         experiments.clear()
     }
 }
+
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+data class RecordedExperimentData(
+    val branch: String,
+    val extra: Map<String, String>? = null
+)

@@ -6,12 +6,10 @@ package mozilla.components.ui.autocomplete
 
 import android.content.Context
 import android.content.Context.INPUT_METHOD_SERVICE
-import android.graphics.Color.parseColor
 import android.graphics.Rect
 import android.os.Build
 import android.provider.Settings.Secure.DEFAULT_INPUT_METHOD
 import android.provider.Settings.Secure.getString
-import android.support.v7.widget.AppCompatEditText
 import android.text.Editable
 import android.text.NoCopySpan
 import android.text.Selection
@@ -19,6 +17,7 @@ import android.text.Spanned
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -30,16 +29,39 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
+import androidx.annotation.VisibleForTesting
+import androidx.appcompat.widget.AppCompatEditText
 
 typealias OnCommitListener = () -> Unit
 typealias OnFilterListener = (String) -> Unit
 typealias OnSearchStateChangeListener = (Boolean) -> Unit
 typealias OnTextChangeListener = (String, String) -> Unit
+typealias OnDispatchKeyEventPreImeListener = (KeyEvent?) -> Boolean
 typealias OnKeyPreImeListener = (View, Int, KeyEvent) -> Boolean
 typealias OnSelectionChangedListener = (Int, Int) -> Unit
 typealias OnWindowsFocusChangeListener = (Boolean) -> Unit
 
 typealias TextFormatter = (String) -> String
+
+/**
+ * Aids in testing functionality which relies on some aspects of InlineAutocompleteEditText.
+ */
+interface AutocompleteView {
+    /**
+     * Current text.
+     */
+    val originalText: String
+
+    /**
+     * Apply provided [result] autocomplete result.
+     */
+    fun applyAutocompleteResult(result: InlineAutocompleteEditText.AutocompleteResult)
+
+    /**
+     * Notify that there is no autocomplete result available.
+     */
+    fun noAutocompleteResult()
+}
 
 /**
  * A UI edit text component which supports inline autocompletion.
@@ -64,10 +86,10 @@ typealias TextFormatter = (String) -> String
  */
 @Suppress("LargeClass", "TooManyFunctions")
 open class InlineAutocompleteEditText @JvmOverloads constructor(
-    val ctx: Context,
+    ctx: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = R.attr.editTextStyle
-) : AppCompatEditText(ctx, attrs, defStyleAttr) {
+) : AppCompatEditText(ctx, attrs, defStyleAttr), AutocompleteView {
 
     data class AutocompleteResult(
         val text: String,
@@ -90,6 +112,9 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
     private var textChangeListener: OnTextChangeListener? = null
     fun setOnTextChangeListener(l: OnTextChangeListener) { textChangeListener = l }
 
+    private var dispatchKeyEventPreImeListener: OnDispatchKeyEventPreImeListener? = null
+    fun setOnDispatchKeyEventPreImeListener(l: OnDispatchKeyEventPreImeListener?) { dispatchKeyEventPreImeListener = l }
+
     private var keyPreImeListener: OnKeyPreImeListener? = null
     fun setOnKeyPreImeListener(l: OnKeyPreImeListener) { keyPreImeListener = l }
 
@@ -101,30 +126,39 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
 
     // The previous autocomplete result returned to us
     var autocompleteResult: AutocompleteResult? = null
-        private set
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        public set
 
     // Length of the user-typed portion of the result
     private var autoCompletePrefixLength: Int = 0
     // If text change is due to us setting autocomplete
     private var settingAutoComplete: Boolean = false
     // Spans used for marking the autocomplete text
-    private var autoCompleteSpans: Array<Any>? = null
+    private var autoCompleteSpans: List<Any>? = null
     // Do not process autocomplete result
     private var discardAutoCompleteResult: Boolean = false
 
     val nonAutocompleteText: String
         get() = getNonAutocompleteText(text)
 
-    val originalText: String
+    override val originalText: String
         get() = text.subSequence(0, autoCompletePrefixLength).toString()
 
-    private val autoCompleteBackgroundColor: Int = {
+    /**
+     * The background color used for the autocomplete suggestion.
+     */
+    var autoCompleteBackgroundColor: Int = {
         val a = context.obtainStyledAttributes(attrs, R.styleable.InlineAutocompleteEditText)
         val color = a.getColor(R.styleable.InlineAutocompleteEditText_autocompleteBackgroundColor,
                 DEFAULT_AUTOCOMPLETE_BACKGROUND_COLOR)
         a.recycle()
         color
     }()
+
+    /**
+     * The Foreground color used for the autocomplete suggestion.
+     */
+    var autoCompleteForegroundColor: Int? = null
 
     private val inputMethodManger get() = context.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager?
 
@@ -198,8 +232,8 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
     public override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
-        this.keyPreImeListener = onKeyPreIme
-        this.selectionChangedListener = onSelectionChanged
+        if (this.keyPreImeListener == null) { this.keyPreImeListener = onKeyPreIme }
+        if (this.selectionChangedListener == null) { this.selectionChangedListener = onSelectionChanged }
 
         setOnKeyListener(onKey)
         addTextChangedListener(TextChangeListener())
@@ -235,6 +269,15 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
 
         // Any autocomplete text would have been overwritten, so reset our autocomplete states.
         resetAutocompleteState()
+    }
+
+    fun setText(text: CharSequence?, shouldAutoComplete: Boolean = true) {
+        val previousEnabledState = isEnabled
+
+        // Disable the edit text if necessary in order to stop auto completion
+        isEnabled = shouldAutoComplete
+        setText(text, TextView.BufferType.EDITABLE)
+        isEnabled = previousEnabledState
     }
 
     override fun getText(): Editable {
@@ -276,7 +319,11 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
      * Reset autocomplete states to their initial values
      */
     private fun resetAutocompleteState() {
-        autoCompleteSpans = arrayOf(AUTOCOMPLETE_SPAN, BackgroundColorSpan(autoCompleteBackgroundColor))
+        autoCompleteSpans = mutableListOf(
+            AUTOCOMPLETE_SPAN,
+            BackgroundColorSpan(autoCompleteBackgroundColor)).apply {
+            autoCompleteForegroundColor?.let { add(ForegroundColorSpan(it)) }
+        }
         autocompleteResult = null
         // Pretend we already autocompleted the existing text,
         // so that actions like backspacing don't trigger autocompletion.
@@ -349,10 +396,10 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
      * Applies the provided result by updating the current autocomplete
      * text and selection, if any.
      *
-     * @param result the [AutocompleteProvider.AutocompleteResult] to apply
+     * @param result the [AutocompleteResult] to apply
      */
     @Suppress("ComplexMethod", "ReturnCount")
-    fun applyAutocompleteResult(result: AutocompleteResult) {
+    override fun applyAutocompleteResult(result: AutocompleteResult) {
         // If discardAutoCompleteResult is true, we temporarily disabled
         // autocomplete (due to backspacing, etc.) and we should bail early.
         if (discardAutoCompleteResult) {
@@ -458,7 +505,7 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
         announceForAccessibility(text.toString())
     }
 
-    fun noAutocompleteResult() {
+    override fun noAutocompleteResult() {
         removeAutocomplete(text)
     }
 
@@ -596,6 +643,12 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
         }
     }
 
+    override fun dispatchKeyEventPreIme(event: KeyEvent?): Boolean {
+        return event?.let {
+            dispatchKeyEventPreImeListener?.invoke(it) ?: onKeyPreIme(it.keyCode, it)
+        } ?: super.dispatchKeyEventPreIme(event)
+    }
+
     override fun onKeyPreIme(keyCode: Int, event: KeyEvent): Boolean {
         return keyPreImeListener?.invoke(this, keyCode, event) ?: false
     }
@@ -638,8 +691,8 @@ open class InlineAutocompleteEditText @JvmOverloads constructor(
     }
 
     companion object {
-        val AUTOCOMPLETE_SPAN = NoCopySpan.Concrete()
-        val DEFAULT_AUTOCOMPLETE_BACKGROUND_COLOR = parseColor("#ffb5007f")
+        internal val AUTOCOMPLETE_SPAN = NoCopySpan.Concrete()
+        internal const val DEFAULT_AUTOCOMPLETE_BACKGROUND_COLOR = 0xffb5007f.toInt()
 
         // The Echo Show IME does not conflict with Fire TV: com.amazon.tv.ime/.FireTVIME
         // However, it may be used by other Amazon keyboards. In theory, if they have the same IME

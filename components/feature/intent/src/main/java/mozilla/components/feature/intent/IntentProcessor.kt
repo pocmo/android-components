@@ -4,6 +4,7 @@
 
 package mozilla.components.feature.intent
 
+import android.content.Context
 import android.content.Intent
 import android.text.TextUtils
 import mozilla.components.browser.session.Session
@@ -12,8 +13,8 @@ import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.tab.CustomTabConfig
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.session.SessionUseCases
-import mozilla.components.support.ktx.kotlin.isUrl
 import mozilla.components.support.utils.SafeIntent
+import mozilla.components.support.utils.WebURLFinder
 
 typealias IntentHandler = (Intent) -> Boolean
 
@@ -27,13 +28,16 @@ typealias IntentHandler = (Intent) -> Boolean
  * @property useDefaultHandlers Whether or not the built-in handlers should be used.
  * @property openNewTab Whether a processed intent should open a new tab or
  * open URLs in the currently selected tab.
+ * @property isPrivate Whether a processed intent should open a new tab as private
  */
 class IntentProcessor(
     private val sessionUseCases: SessionUseCases,
     private val sessionManager: SessionManager,
     private val searchUseCases: SearchUseCases,
+    private val context: Context,
     private val useDefaultHandlers: Boolean = true,
-    private val openNewTab: Boolean = true
+    private val openNewTab: Boolean = true,
+    private val isPrivate: Boolean = false
 ) {
     private val defaultActionViewHandler = { intent: Intent ->
         val safeIntent = SafeIntent(intent)
@@ -44,7 +48,8 @@ class IntentProcessor(
 
             CustomTabConfig.isCustomTabIntent(safeIntent) -> {
                 val session = Session(url, false, Source.CUSTOM_TAB).apply {
-                    this.customTabConfig = CustomTabConfig.createFromIntent(safeIntent)
+                    val displayMetrics = context.resources.displayMetrics
+                    this.customTabConfig = CustomTabConfig.createFromIntent(safeIntent, displayMetrics)
                 }
                 sessionManager.add(session)
                 sessionUseCases.loadUrl.invoke(url, session)
@@ -53,7 +58,7 @@ class IntentProcessor(
             }
 
             else -> {
-                val session = createSession(url, source = Source.ACTION_VIEW)
+                val session = createSession(url, private = isPrivate, source = Source.ACTION_VIEW)
                 sessionUseCases.loadUrl.invoke(url, session)
                 true
             }
@@ -68,15 +73,19 @@ class IntentProcessor(
             TextUtils.isEmpty(extraText.trim()) -> false
 
             else -> {
-                val url = extraText.split(" ").find { it.isUrl() }
-                if (url != null) {
-                    val session = createSession(url, source = Source.ACTION_SEND)
-                    sessionUseCases.loadUrl.invoke(url, session)
-                    true
-                } else {
-                    searchUseCases.defaultSearch.invoke(extraText, Source.ACTION_SEND, openNewTab)
-                    true
+                WebURLFinder(extraText).bestWebURL()?.let { url ->
+                    sessionUseCases.loadUrl.invoke(
+                        url,
+                        createSession(
+                            url,
+                            private = isPrivate,
+                            source = Source.ACTION_SEND
+                        )
+                    )
+                } ?: run {
+                    searchUseCases.newTabSearch.invoke(extraText, Source.ACTION_SEND, openNewTab)
                 }
+                true
             }
         }
     }
@@ -105,7 +114,8 @@ class IntentProcessor(
      * @return true if the intent was processed, otherwise false.
      */
     fun process(intent: Intent): Boolean {
-        return handlers[intent.action]?.invoke(intent) ?: false
+        val action = intent.action ?: return false
+        return handlers[action]?.invoke(intent) ?: false
     }
 
     /**

@@ -7,9 +7,13 @@ package mozilla.components.feature.awesomebar.provider
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.concept.awesomebar.AwesomeBar
+import mozilla.components.feature.awesomebar.internal.loadLambda
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.support.utils.WebURLFinder
+import java.util.UUID
 
 private const val MIME_TYPE_TEXT_PLAIN = "text/plain"
 
@@ -19,24 +23,40 @@ private const val MIME_TYPE_TEXT_PLAIN = "text/plain"
  */
 class ClipboardSuggestionProvider(
     context: Context,
-    private val loadUrlUseCase: SessionUseCases.LoadUrlUseCase
+    private val loadUrlUseCase: SessionUseCases.LoadUrlUseCase,
+    private val icon: Bitmap? = null,
+    private val title: String? = null,
+    private val icons: BrowserIcons? = null
 ) : AwesomeBar.SuggestionProvider {
+    override val id: String = UUID.randomUUID().toString()
+
     private val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-    override suspend fun onInputChanged(text: String): List<AwesomeBar.Suggestion> {
+    override fun onInputStarted(): List<AwesomeBar.Suggestion> = createClipboardSuggestion()
+
+    override suspend fun onInputChanged(text: String) = createClipboardSuggestion()
+
+    private fun createClipboardSuggestion(): List<AwesomeBar.Suggestion> {
         val url = getTextFromClipboard(clipboardManager)?.let {
             findUrl(it)
         } ?: return emptyList()
 
         return listOf(AwesomeBar.Suggestion(
-            id = "mozac-feature-awesomebar-clipboard",
+            provider = this,
+            id = url,
             description = url,
             flags = setOf(AwesomeBar.Suggestion.Flag.CLIPBOARD),
+            icon = icons.loadLambda(url, icon),
+            title = title,
             onSuggestionClicked = {
                 loadUrlUseCase.invoke(url)
             }
         ))
     }
+
+    override val shouldClearSuggestions: Boolean
+        // We do not want the suggestion of this provider to disappear and re-appear when text changes.
+        get() = false
 }
 
 private fun findUrl(text: String): String? {

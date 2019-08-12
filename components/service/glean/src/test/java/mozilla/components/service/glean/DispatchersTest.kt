@@ -4,7 +4,6 @@
 
 package mozilla.components.service.glean
 
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
@@ -18,17 +17,22 @@ class DispatchersTest {
     fun `API scope runs off the main thread`() {
         val mainThread = Thread.currentThread()
         var threadCanary = false
+        @Suppress("EXPERIMENTAL_API_USAGE")
+        Dispatchers.API.setTestingMode(false)
 
         runBlocking {
+            @Suppress("EXPERIMENTAL_API_USAGE")
             Dispatchers.API.launch {
                 assertNotSame(mainThread, Thread.currentThread())
                 // Use the canary bool to make sure this is getting called before
                 // the test completes.
                 assertEquals(false, threadCanary)
                 threadCanary = true
-            }.join()
+            }!!.join()
         }
 
+        @Suppress("EXPERIMENTAL_API_USAGE")
+        Dispatchers.API.setTestingMode(true)
         assertEquals(true, threadCanary)
         assertSame(mainThread, Thread.currentThread())
     }

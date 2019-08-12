@@ -16,7 +16,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -37,12 +37,13 @@ android {
 
 dependencies {
     implementation project(':concept-storage')
-    implementation project(':feature-sync')
     implementation project(':service-firefox-accounts')
     implementation project(':service-sync-logins')
+    implementation project(':feature-sync')
 
     implementation Dependencies.kotlin_stdlib
 
-    implementation Dependencies.support_appcompat
-    implementation Dependencies.support_customtabs
+    implementation Dependencies.androidx_appcompat
+    implementation Dependencies.androidx_browser
+    implementation Dependencies.androidx_recyclerview
 }

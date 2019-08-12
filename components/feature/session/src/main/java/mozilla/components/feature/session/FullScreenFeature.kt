@@ -9,24 +9,24 @@ package mozilla.components.feature.session
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.support.base.feature.BackHandler
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 
 /**
  * Feature implementation for handling fullscreen mode (exiting and back button presses).
  */
 open class FullScreenFeature(
-    private val sessionManager: SessionManager,
+    sessionManager: SessionManager,
     private val sessionUseCases: SessionUseCases,
     private val sessionId: String? = null,
     private val fullScreenChanged: (Boolean) -> Unit
-) : SelectionAwareSessionObserver(sessionManager), LifecycleAwareFeature {
+) : SelectionAwareSessionObserver(sessionManager), LifecycleAwareFeature, BackHandler {
 
     /**
      * Starts the feature and a observer to listen for fullscreen changes.
      */
     override fun start() {
-        val session = sessionId?.let { sessionManager.findSessionById(sessionId) }
-        session?.let { observeFixed(it) } ?: observeSelected()
+        observeIdOrSelected(sessionId)
     }
 
     override fun onFullScreenChanged(session: Session, enabled: Boolean) = fullScreenChanged(enabled)
@@ -36,7 +36,7 @@ open class FullScreenFeature(
      *
      * @return Returns true if the fullscreen mode was successfully exited; false if no effect was taken.
      */
-    fun onBackPressed(): Boolean {
+    override fun onBackPressed(): Boolean {
         activeSession?.let {
             if (it.fullScreenMode) {
                 sessionUseCases.exitFullscreen.invoke(it)

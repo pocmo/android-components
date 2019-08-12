@@ -12,7 +12,7 @@ android {
         minSdkVersion config.minSdkVersion
         targetSdkVersion config.targetSdkVersion
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -35,9 +35,14 @@ dependencies {
 
     implementation Dependencies.testing_junit
     implementation Dependencies.testing_mockito
-    implementation Dependencies.testing_robolectric
+    implementation (Dependencies.testing_robolectric) {
+        exclude group: 'org.apache.maven'
+    }
+    testImplementation Dependencies.testing_maven_ant_tasks
 
-    testImplementation Dependencies.support_compat
+    implementation Dependencies.androidx_test_core
+
+    testImplementation Dependencies.androidx_core
     testImplementation project(':support-ktx')
 }
 

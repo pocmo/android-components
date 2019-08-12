@@ -4,13 +4,13 @@
 
 package mozilla.components.feature.session.bundling.db
 
-import android.arch.lifecycle.LiveData
-import android.arch.paging.DataSource
-import android.arch.persistence.room.Dao
-import android.arch.persistence.room.Delete
-import android.arch.persistence.room.Insert
-import android.arch.persistence.room.Query
-import android.arch.persistence.room.Update
+import androidx.lifecycle.LiveData
+import androidx.paging.DataSource
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 
 /**
  * Internal dao for accessing and modifying the bundles in the database.
@@ -26,11 +26,11 @@ internal interface BundleDao {
     @Delete
     fun deleteBundle(bundle: BundleEntity)
 
-    @Query("SELECT * FROM bundles ORDER BY saved_at DESC LIMIT :limit")
-    fun getBundles(limit: Int = 20): LiveData<List<BundleEntity>>
+    @Query("SELECT * FROM bundles WHERE saved_at >= :since ORDER BY saved_at DESC LIMIT :limit")
+    fun getBundles(since: Long, limit: Int): LiveData<List<BundleEntity>>
 
-    @Query("SELECT * FROM bundles")
-    fun getBundlesPaged(): DataSource.Factory<Int, BundleEntity>
+    @Query("SELECT * FROM bundles WHERE saved_at >= :since")
+    fun getBundlesPaged(since: Long): DataSource.Factory<Int, BundleEntity>
 
     @Query("SELECT * FROM bundles WHERE saved_at >= :since ORDER BY saved_at DESC LIMIT 1")
     fun getLastBundle(since: Long): BundleEntity?

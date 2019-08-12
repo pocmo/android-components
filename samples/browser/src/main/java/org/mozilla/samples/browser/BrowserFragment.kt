@@ -4,18 +4,17 @@
 
 package org.mozilla.samples.browser
 
-import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Intent
-import android.arch.lifecycle.Lifecycle
-import android.arch.lifecycle.LifecycleObserver
-import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Bundle
-import android.support.v4.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import kotlinx.android.synthetic.main.fragment_browser.view.*
+import mozilla.components.browser.session.SelectionAwareSessionObserver
+import mozilla.components.browser.session.Session
 import mozilla.components.feature.awesomebar.AwesomeBarFeature
+import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
 import mozilla.components.feature.contextmenu.ContextMenuCandidate
 import mozilla.components.feature.contextmenu.ContextMenuFeature
 import mozilla.components.feature.customtabs.CustomTabsToolbarFeature
@@ -23,25 +22,32 @@ import mozilla.components.feature.downloads.DownloadsFeature
 import mozilla.components.feature.prompts.PromptFeature
 import mozilla.components.feature.session.CoordinateScrollingFeature
 import mozilla.components.feature.session.SessionFeature
+import mozilla.components.feature.session.ThumbnailsFeature
 import mozilla.components.feature.session.WindowFeature
+import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import mozilla.components.feature.tabs.toolbar.TabsToolbarFeature
 import mozilla.components.feature.toolbar.ToolbarAutocompleteFeature
 import mozilla.components.feature.toolbar.ToolbarFeature
-import mozilla.components.support.ktx.android.content.isPermissionGranted
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
+import mozilla.components.support.base.feature.BackHandler
+import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.ktx.android.arch.lifecycle.addObservers
 import org.mozilla.samples.browser.ext.components
+import org.mozilla.samples.browser.integration.FindInPageIntegration
+import org.mozilla.samples.browser.integration.ReaderViewIntegration
 
 class BrowserFragment : Fragment(), BackHandler {
-    private lateinit var sessionFeature: SessionFeature
-    private lateinit var toolbarFeature: ToolbarFeature
-    private lateinit var toolbarAutocompleteFeature: ToolbarAutocompleteFeature
-    private lateinit var tabsToolbarFeature: TabsToolbarFeature
-    private lateinit var downloadsFeature: DownloadsFeature
-    private lateinit var scrollFeature: CoordinateScrollingFeature
-    private lateinit var contextMenuFeature: ContextMenuFeature
-    private lateinit var promptFeature: PromptFeature
-    private lateinit var windowFeature: WindowFeature
-    private lateinit var customTabsToolbarFeature: CustomTabsToolbarFeature
+    private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
+    private val toolbarFeature = ViewBoundFeatureWrapper<ToolbarFeature>()
+    private val customTabsToolbarFeature = ViewBoundFeatureWrapper<CustomTabsToolbarFeature>()
+    private val downloadsFeature = ViewBoundFeatureWrapper<DownloadsFeature>()
+    private val promptFeature = ViewBoundFeatureWrapper<PromptFeature>()
+    private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
+    private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
+    private val thumbnailsFeature = ViewBoundFeatureWrapper<ThumbnailsFeature>()
+    private val readerViewFeature = ViewBoundFeatureWrapper<ReaderViewIntegration>()
 
+    @Suppress("LongMethod")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val layout = inflater.inflate(R.layout.fragment_browser, container, false)
 
@@ -49,80 +55,143 @@ class BrowserFragment : Fragment(), BackHandler {
 
         val sessionId = arguments?.getString(SESSION_ID)
 
-        sessionFeature = SessionFeature(
+        sessionFeature.set(
+            feature = SessionFeature(
                 components.sessionManager,
                 components.sessionUseCases,
                 layout.engineView,
-                sessionId)
+                sessionId),
+            owner = this,
+            view = layout)
 
-        toolbarFeature = ToolbarFeature(
+        toolbarFeature.set(
+            feature = ToolbarFeature(
                 layout.toolbar,
                 components.sessionManager,
                 components.sessionUseCases.loadUrl,
                 components.defaultSearchUseCase,
-                sessionId)
+                sessionId),
+            owner = this,
+            view = layout)
 
-        toolbarAutocompleteFeature = ToolbarAutocompleteFeature(layout.toolbar).apply {
-            this.addHistoryStorageProvider(components.historyStorage)
-            this.addDomainProvider(components.shippedDomainsProvider)
+        val menuUpdater = object : SelectionAwareSessionObserver(components.sessionManager) {
+            override fun onLoadingStateChanged(session: Session, loading: Boolean) {
+                layout.toolbar.invalidateActions()
+            }
+
+            override fun onNavigationStateChanged(session: Session, canGoBack: Boolean, canGoForward: Boolean) {
+                layout.toolbar.invalidateActions()
+            }
+        }
+        menuUpdater.observeIdOrSelected(sessionId)
+
+        ToolbarAutocompleteFeature(layout.toolbar).apply {
+            addHistoryStorageProvider(components.historyStorage)
+            addDomainProvider(components.shippedDomainsProvider)
         }
 
-        tabsToolbarFeature = TabsToolbarFeature(layout.toolbar, components.sessionManager, ::showTabs)
+        TabsToolbarFeature(layout.toolbar, components.sessionManager, sessionId, ::showTabs)
 
-        AwesomeBarFeature(layout.awesomeBar, layout.toolbar, layout.engineView)
-            .addHistoryProvider(components.historyStorage, components.sessionUseCases.loadUrl)
+        AwesomeBarFeature(layout.awesomeBar, layout.toolbar, layout.engineView, components.icons)
+            .addHistoryProvider(
+                components.historyStorage,
+                components.sessionUseCases.loadUrl)
             .addSessionProvider(components.sessionManager, components.tabsUseCases.selectTab)
             .addSearchProvider(
                 components.searchEngineManager.getDefaultSearchEngine(requireContext()),
-                components.searchUseCases.defaultSearch)
+                components.searchUseCases.defaultSearch,
+                fetchClient = HttpURLConnectionClient(),
+                mode = SearchSuggestionProvider.Mode.MULTIPLE_SUGGESTIONS)
             .addClipboardProvider(requireContext(), components.sessionUseCases.loadUrl)
 
-        downloadsFeature = DownloadsFeature(
-            requireContext(),
-            sessionManager = components.sessionManager,
-            fragmentManager = childFragmentManager
-        )
+        downloadsFeature.set(
+            feature = DownloadsFeature(
+                requireContext(),
+                sessionManager = components.sessionManager,
+                fragmentManager = childFragmentManager,
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_DOWNLOAD_PERMISSIONS)
+                }),
+            owner = this,
+            view = layout)
 
-        downloadsFeature.onNeedToRequestPermissions = { _, _ ->
-            requestPermissions(arrayOf(WRITE_EXTERNAL_STORAGE), PERMISSION_WRITE_STORAGE_REQUEST)
-        }
+        val scrollFeature = CoordinateScrollingFeature(components.sessionManager, layout.engineView, layout.toolbar)
 
-        scrollFeature = CoordinateScrollingFeature(components.sessionManager, layout.engineView, layout.toolbar)
-
-        contextMenuFeature = ContextMenuFeature(
+        val contextMenuFeature = ContextMenuFeature(
             requireFragmentManager(),
             components.sessionManager,
             ContextMenuCandidate.defaultCandidates(
                 requireContext(),
                 components.tabsUseCases,
-                layout))
+                layout),
+            layout.engineView)
 
-        promptFeature = PromptFeature(
-            fragment = this,
-            sessionManager = components.sessionManager,
-            fragmentManager = requireFragmentManager()
-        ) { _, permissions, requestCode ->
-            requestPermissions(permissions, requestCode)
-        }
+        promptFeature.set(
+            feature = PromptFeature(
+                fragment = this,
+                sessionManager = components.sessionManager,
+                sessionId = sessionId,
+                fragmentManager = requireFragmentManager(),
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_PROMPT_PERMISSIONS)
+                }),
+            owner = this,
+            view = layout)
 
-        windowFeature = WindowFeature(components.engine, components.sessionManager)
+        val windowFeature = WindowFeature(components.engine, components.sessionManager)
 
-        customTabsToolbarFeature = CustomTabsToolbarFeature(
-            components.sessionManager,
-            layout.toolbar,
-            sessionId
+        sitePermissionsFeature.set(
+            feature = SitePermissionsFeature(
+                context = requireContext(),
+                sessionManager = components.sessionManager,
+                sessionId = sessionId,
+                fragmentManager = requireFragmentManager()
+            ) { permissions ->
+                requestPermissions(permissions, REQUEST_CODE_APP_PERMISSIONS)
+            },
+            owner = this,
+            view = layout
+        )
+
+        customTabsToolbarFeature.set(
+            feature = CustomTabsToolbarFeature(
+                components.sessionManager,
+                layout.toolbar,
+                sessionId,
+                components.menuBuilder,
+                closeListener = { activity?.finish() }),
+            owner = this,
+            view = layout)
+
+        findInPageIntegration.set(
+            feature = FindInPageIntegration(components.sessionManager, layout.findInPage, layout.engineView),
+            owner = this,
+            view = layout)
+
+        readerViewFeature.set(
+            feature = ReaderViewIntegration(
+                requireContext(),
+                components.engine,
+                components.sessionManager,
+                layout.toolbar,
+                layout.readerViewBar,
+                layout.readerViewAppearanceButton
+            ),
+            owner = this,
+            view = layout
         )
 
         // Observe the lifecycle for supported features
         lifecycle.addObservers(
-            sessionFeature,
-            toolbarFeature,
-            downloadsFeature,
             scrollFeature,
             contextMenuFeature,
-            promptFeature,
-            windowFeature,
-            customTabsToolbarFeature
+            windowFeature
+        )
+
+        thumbnailsFeature.set(
+            feature = ThumbnailsFeature(requireContext(), layout.engineView, components.sessionManager),
+            owner = this,
+            view = layout
         )
 
         return layout
@@ -138,22 +207,21 @@ class BrowserFragment : Fragment(), BackHandler {
     }
 
     override fun onBackPressed(): Boolean {
-        if (toolbarFeature.handleBackPressed()) {
-            return true
+        return when {
+            readerViewFeature.onBackPressed() -> true
+            findInPageIntegration.onBackPressed() -> true
+            toolbarFeature.onBackPressed() -> true
+            sessionFeature.onBackPressed() -> true
+            customTabsToolbarFeature.onBackPressed() -> true
+            else -> false
         }
-
-        if (sessionFeature.handleBackPressed()) {
-            return true
-        }
-
-        return false
     }
-
-    private fun isStoragePermissionAvailable() = requireContext().isPermissionGranted(WRITE_EXTERNAL_STORAGE)
 
     companion object {
         private const val SESSION_ID = "session_id"
-        private const val PERMISSION_WRITE_STORAGE_REQUEST = 1
+        private const val REQUEST_CODE_DOWNLOAD_PERMISSIONS = 1
+        private const val REQUEST_CODE_PROMPT_PERMISSIONS = 2
+        private const val REQUEST_CODE_APP_PERMISSIONS = 3
 
         fun create(sessionId: String? = null): BrowserFragment = BrowserFragment().apply {
             arguments = Bundle().apply {
@@ -164,20 +232,19 @@ class BrowserFragment : Fragment(), BackHandler {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
-            PERMISSION_WRITE_STORAGE_REQUEST -> {
-                if ((grantResults.isNotEmpty() && grantResults[0] == PERMISSION_GRANTED) &&
-                    isStoragePermissionAvailable()) {
-                    // permission was granted, yay!
-                    downloadsFeature.onPermissionsGranted()
-                }
+            REQUEST_CODE_DOWNLOAD_PERMISSIONS -> downloadsFeature.withFeature {
+                it.onPermissionsResult(permissions, grantResults)
+            }
+            REQUEST_CODE_PROMPT_PERMISSIONS -> promptFeature.withFeature {
+                it.onPermissionsResult(permissions, grantResults)
+            }
+            REQUEST_CODE_APP_PERMISSIONS -> sitePermissionsFeature.withFeature {
+                it.onPermissionsResult(grantResults)
             }
         }
-        promptFeature.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        promptFeature.onActivityResult(requestCode, resultCode, data)
+        promptFeature.withFeature { it.onActivityResult(requestCode, resultCode, data) }
     }
-
-    private fun Lifecycle.addObservers(vararg observers: LifecycleObserver) = observers.forEach { addObserver(it) }
 }

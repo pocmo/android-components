@@ -4,9 +4,12 @@
 
 package mozilla.components.feature.toolbar
 
+import androidx.annotation.ColorInt
 import mozilla.components.concept.toolbar.Toolbar
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.feature.session.SessionUseCases
+import mozilla.components.lib.publicsuffixlist.PublicSuffixList
+import mozilla.components.support.base.feature.BackHandler
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 
 /**
@@ -23,9 +26,10 @@ class ToolbarFeature(
     sessionManager: SessionManager,
     loadUrlUseCase: SessionUseCases.LoadUrlUseCase,
     searchUseCase: SearchUseCase? = null,
-    sessionId: String? = null
-) : LifecycleAwareFeature {
-    private val presenter = ToolbarPresenter(toolbar, sessionManager, sessionId)
+    sessionId: String? = null,
+    urlRenderConfiguration: UrlRenderConfiguration? = null
+) : LifecycleAwareFeature, BackHandler {
+    private val presenter = ToolbarPresenter(toolbar, sessionManager, sessionId, urlRenderConfiguration)
     private val interactor = ToolbarInteractor(toolbar, loadUrlUseCase, searchUseCase)
 
     /**
@@ -41,7 +45,7 @@ class ToolbarFeature(
      *
      * @return true if the event was handled, otherwise false.
      */
-    fun handleBackPressed(): Boolean {
+    override fun onBackPressed(): Boolean {
         return toolbar.onBackPressed()
     }
 
@@ -49,7 +53,35 @@ class ToolbarFeature(
      * Stop feature: App is in the background.
      */
     override fun stop() {
-        interactor.stop()
         presenter.stop()
+    }
+
+    /**
+     * Configuration that controls how URLs are rendered.
+     *
+     * @property publicSuffixList A shared/global [PublicSuffixList] object required to extract certain domain parts.
+     * @property registrableDomainColor Text color that should be used for the registrable domain of the URL (see
+     * [PublicSuffixList.getPublicSuffixPlusOne] for an explanation of "registrable domain".
+     * @property urlColor Optional text color used for the URL.
+     * @property renderStyle Sealed class that controls the style of the url to be displayed
+     */
+    data class UrlRenderConfiguration(
+        internal val publicSuffixList: PublicSuffixList,
+        @ColorInt internal val registrableDomainColor: Int,
+        @ColorInt internal val urlColor: Int? = null,
+        internal val renderStyle: RenderStyle = RenderStyle.ColoredUrl
+    )
+
+    /**
+     * Controls how the url should be styled
+     *
+     * RegistrableDomain: displays only the url, uncolored
+     * ColoredUrl: displays the registrableDomain with color and url with another color
+     * UncoloredUrl: displays the full url, uncolored
+     */
+    sealed class RenderStyle {
+        object RegistrableDomain : RenderStyle()
+        object ColoredUrl : RenderStyle()
+        object UncoloredUrl : RenderStyle()
     }
 }

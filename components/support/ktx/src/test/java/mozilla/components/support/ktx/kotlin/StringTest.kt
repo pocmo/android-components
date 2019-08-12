@@ -4,10 +4,12 @@
 
 package mozilla.components.support.ktx.kotlin
 
+import android.net.Uri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -18,14 +20,6 @@ import java.util.Calendar.MILLISECOND
 class StringTest {
 
     @Test
-    fun toNormalizedUrl() {
-        val expectedUrl = "http://mozilla.org"
-        assertEquals(expectedUrl, "http://mozilla.org".toNormalizedUrl())
-        assertEquals(expectedUrl, "  http://mozilla.org  ".toNormalizedUrl())
-        assertEquals(expectedUrl, "mozilla.org".toNormalizedUrl())
-    }
-
-    @Test
     fun isUrl() {
         assertTrue("mozilla.org".isUrl())
         assertTrue(" mozilla.org ".isUrl())
@@ -33,10 +27,29 @@ class StringTest {
         assertTrue("https://mozilla.org".isUrl())
         assertTrue("file://somefile.txt".isUrl())
         assertTrue("http://mozilla".isUrl())
+        assertTrue("http://192.168.255.255".isUrl())
+        assertTrue("about:crashcontent".isUrl())
+        assertTrue(" about:crashcontent ".isUrl())
+        assertTrue("sample:about ".isUrl())
 
         assertFalse("mozilla".isUrl())
         assertFalse("mozilla android".isUrl())
         assertFalse(" mozilla android ".isUrl())
+        assertFalse("Tweet:".isUrl())
+        assertFalse("inurl:mozilla.org advanced search".isUrl())
+        assertFalse("what is about:crashes".isUrl())
+
+        val extraText = "Check out @asa’s Tweet: https://twitter.com/asa/status/123456789?s=09"
+        val url = extraText.split(" ").find { it.isUrl() }
+        assertNotEquals("Tweet:", url)
+    }
+
+    @Test
+    fun toNormalizedUrl() {
+        val expectedUrl = "http://mozilla.org"
+        assertEquals(expectedUrl, "http://mozilla.org".toNormalizedUrl())
+        assertEquals(expectedUrl, "  http://mozilla.org  ".toNormalizedUrl())
+        assertEquals(expectedUrl, "mozilla.org".toNormalizedUrl())
     }
 
     @Test
@@ -47,6 +60,8 @@ class StringTest {
         assertTrue("tel:+1234567890 ".isPhone())
         assertTrue("TEL:+1234567890".isPhone())
         assertTrue("Tel:+1234567890".isPhone())
+
+        assertFalse("tel:word".isPhone())
     }
 
     @Test
@@ -70,6 +85,30 @@ class StringTest {
     }
 
     @Test
+    fun toUri() {
+        assertEquals(
+            Uri.parse("https://www.mozilla.org"),
+            "https://www.mozilla.org".toUri())
+
+        assertEquals(
+            Uri.parse("https://www.mozilla.org/en-US/firefox/new/?redirect_source=firefox-com"),
+            "https://www.mozilla.org/en-US/firefox/new/?redirect_source=firefox-com".toUri())
+
+        assertEquals(
+            Uri.parse(""),
+            "".toUri())
+
+        assertEquals(
+            Uri.parse("https://"),
+            "https://".toUri())
+
+        assertEquals(
+            Uri.parse("file://sdcard/"),
+            "file://sdcard/".toUri()
+        )
+    }
+
+    @Test
     fun toDate() {
         val calendar = Calendar.getInstance()
         calendar.set(2019, 10, 29, 0, 0, 0)
@@ -78,5 +117,14 @@ class StringTest {
         calendar.set(2019, 10, 28, 0, 0, 0)
         assertEquals(calendar.time, "2019-11-28".toDate("yyyy-MM-dd"))
         assertNotNull("".toDate("yyyy-MM-dd"))
+    }
+
+    @Test
+    fun sha1() {
+        assertEquals("da39a3ee5e6b4b0d3255bfef95601890afd80709", "".sha1())
+
+        assertEquals("0a4d55a8d778e5022fab701977c5d840bbc486d0", "Hello World".sha1())
+
+        assertEquals("8de545c123907e9f886ba2313560a0abef530594", "ßüöä@!§\$".sha1())
     }
 }

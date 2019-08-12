@@ -22,19 +22,23 @@ android {
 }
 
 dependencies {
+    implementation project(':browser-menu')
     implementation project(':browser-session')
     implementation project(':browser-toolbar')
     implementation project(':concept-engine')
     implementation project(':support-base')
+    implementation project(':support-ktx')
     implementation project(':support-utils')
+    implementation project(':ui-icons')
 
     implementation Dependencies.kotlin_stdlib
     implementation Dependencies.kotlin_coroutines
 
-    api Dependencies.support_customtabs
+    api Dependencies.androidx_browser
 
     testImplementation project(':support-test')
 
+    testImplementation Dependencies.androidx_test_core
     testImplementation Dependencies.testing_junit
     testImplementation Dependencies.testing_robolectric
     testImplementation Dependencies.testing_mockito

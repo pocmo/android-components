@@ -39,11 +39,25 @@ tasks:
       then: focus-nightly-sched  # TODO: Rename to mobile-nightly-sched
       else: taskcluster-github
 
+    github_repository_full_name:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.base.repo.full_name}
+      else: ${event.repository.full_name}
+
     is_repo_trusted:
       # Pull requests on main repository can't be trusted because anybody can open a PR on it, without a review
       $if: 'tasks_for in ["github-push", "github-release", "cron"] && event.repository.html_url == "https://github.com/mozilla-mobile/android-components"'
       then: true
       else: false
+
+    decision_task:
+      $if: 'tasks_for == "github-pull-request"'
+      then: 'pr' 
+      else:
+        $if: 'tasks_for == "github-push"'
+        then: 'push' 
+        else: 'release' 
+
   in:
     $let:
       decision_worker_type:
@@ -52,20 +66,22 @@ tasks:
         else: mobile-1-decision
 
       build_worker_type:
-        $if: 'is_repo_trusted && tasks_for in ["github-release", "cron"]'
-        then: gecko-focus
-        else: android-components-g
-
-      tasks_priority:
         $if: 'is_repo_trusted'
-        then:
-          $if: 'tasks_for == "github-release"'
-          then: highest
-          else:
-            $if: 'tasks_for == "cron"'
-            then: high
-            else: medium
-        else: lowest
+        then: mobile-3-b-andrcmp
+        else: mobile-1-b-andrcmp
+
+      # TODO: revisit once bug 1533314 is done to possibly infer better priorities
+      tasks_priority: highest
+
+      short_head_branch:
+        $if: 'head_branch[:10] == "refs/tags/"'
+        then: {$eval: 'head_branch[10:]'}
+        else:
+          $if: 'head_branch[:11] == "refs/heads/"'
+          then: {$eval: 'head_branch[11:]'}
+          else: ${head_branch}
+
+      assume_scope_prefix: assume:repo:github.com/${github_repository_full_name}
     in:
       $let:
         default_task_definition:
@@ -80,15 +96,11 @@ tasks:
           priority: ${tasks_priority}
           requires: all-completed   # Must be explicit because of Chain of Trust
           retries: 5
-          scopes:
-            - queue:create-task:${tasks_priority}:aws-provisioner-v1/${build_worker_type}
-            - queue:route:statuses
-            - queue:scheduler-id:${scheduler_id}
           routes:
             - statuses  # Automatically added by taskcluster-github. It must be explicit because of Chain of Trust
           payload:
             maxRunTime: 600   # Decision should remain fast enough to schedule a handful of tasks
-            image: mozillamobile/android-components:1.15
+            image: mozillamobile/android-components:1.17
             command:
               - /bin/bash
               - --login
@@ -98,6 +110,7 @@ tasks:
               TASK_ID: ${decision_task_id}
               TASKS_PRIORITY: ${tasks_priority}
               SCHEDULER_ID: ${scheduler_id}
+              BUILD_WORKER_TYPE: ${build_worker_type}
               MOBILE_HEAD_REPOSITORY: ${repository}
               MOBILE_HEAD_BRANCH: ${head_branch}
               MOBILE_HEAD_REV: ${head_rev}
@@ -113,8 +126,6 @@ tasks:
         then:
           $let:
             pr_or_push_parameters:
-              scopes:
-                - secrets:get:project/mobile/android-components/public-tokens
               payload:
                 command:
                   - >-
@@ -122,7 +133,7 @@ tasks:
                     && git config advice.detachedHead false
                     && git checkout ${head_rev}
                     && ./gradlew --no-daemon --version
-                    && python automation/taskcluster/decision_task.py
+                    && python automation/taskcluster/decision_task.py ${decision_task} 
           in:
             - $if: 'tasks_for == "github-pull-request" && event["action"] in ["opened", "reopened", "edited", "synchronize"]'
               then:
@@ -134,7 +145,9 @@ tasks:
                   $mergeDeep:
                     - {$eval: 'default_task_definition'}
                     - {$eval: 'pr_or_push_parameters'}
-                    - payload:
+                    - scopes:
+                        - ${assume_scope_prefix}:pull-request
+                      payload:
                         env:
                           GITHUB_PULL_TITLE: ${pull_request_title}
                       metadata:
@@ -145,7 +158,9 @@ tasks:
                 $mergeDeep:
                   - {$eval: 'default_task_definition'}
                   - {$eval: 'pr_or_push_parameters'}
-                  - metadata:
+                  - scopes:
+                      - ${assume_scope_prefix}:branch:${short_head_branch}
+                    metadata:
                       name: Android Components - Decision task
                       description: Schedules the build and test tasks for Android components.
         else:
@@ -157,84 +172,86 @@ tasks:
                 then: ''
                 else: '--staging'
 
-              nightly_or_release_definition:
-                scopes:
-                  $flatten:
-                    - project:mobile:android-components:releng:beetmover:action:push-to-maven
-                    - queue:create-task:${tasks_priority}:aws-provisioner-v1/github-worker      # Still used by non build tasks
-                    - $if: 'is_repo_trusted'
-                      then:
-                        - queue:create-task:${tasks_priority}:scriptworker-prov-v1/mobile-beetmover-v1
-                      else:
-                        - queue:create-task:${tasks_priority}:scriptworker-prov-v1/mobile-beetmover-dev
-                payload:
-                  env:
-                    MOBILE_TRIGGERED_BY: ${user}
-                  features:
-                    chainOfTrust: true
-                  artifacts:
-                    public/task-graph.json:
-                      type: file
-                      path: /build/android-components/task-graph.json
-                      expires: ${expires_in}
-                    public/actions.json:
-                      type: file
-                      path: /build/android-components/actions.json
-                      expires: ${expires_in}
-                    public/parameters.yml:
-                      type: file
-                      path: /build/android-components/parameters.yml
-                      expires: ${expires_in}
-            in:
-              - $if: 'tasks_for == "github-release"'
+              beetmover_worker_type:
+                $if: 'is_repo_trusted'
+                then: mobile-beetmover-v1
+                else: mobile-beetmover-dev
+
+              beetmover_bucket:
+                $if: 'tasks_for == "github-release"'
                 then:
-                  $let:
-                    tag: ${event.release.tag_name}
-                  in:
+                  $if: 'is_repo_trusted'
+                  then: maven-production
+                  else: maven-staging
+                else:
+                  $if: 'is_repo_trusted'
+                  then: maven-snapshot-production
+                  else: maven-snapshot-staging
+
+            in:
+              $let:
+                nightly_or_release_definition:
+                  payload:
+                    env:
+                      MOBILE_TRIGGERED_BY: ${user}
+                      BEETMOVER_WORKER_TYPE: ${beetmover_worker_type}
+                    features:
+                      chainOfTrust: true
+                    artifacts:
+                      public/task-graph.json:
+                        type: file
+                        path: /build/android-components/task-graph.json
+                        expires: ${expires_in}
+                      public/actions.json:
+                        type: file
+                        path: /build/android-components/actions.json
+                        expires: ${expires_in}
+                      public/parameters.yml:
+                        type: file
+                        path: /build/android-components/parameters.yml
+                        expires: ${expires_in}
+              in:
+                - $if: 'tasks_for == "github-release" && event["action"] == "published"'
+                  then:
+                    $let:
+                      tag: ${event.release.tag_name}
+                    in:
+                      $mergeDeep:
+                        - {$eval: 'default_task_definition'}
+                        - {$eval: 'nightly_or_release_definition'}
+                        - scopes:
+                            - ${assume_scope_prefix}:release
+                          payload:
+                            command:
+                              - >-
+                                git fetch ${repository} --tags
+                                && git config advice.detachedHead false
+                                && git checkout ${tag}
+                                && ./gradlew --no-daemon --version
+                                && python automation/taskcluster/decision_task.py release --version "${tag}"
+                                ${command_staging_flag}
+                          metadata:
+                            name: Android Components - Decision task (${tag})
+                            description: Build and publish release versions.
+                - $if: 'tasks_for == "cron"'
+                  then:
                     $mergeDeep:
                       - {$eval: 'default_task_definition'}
                       - {$eval: 'nightly_or_release_definition'}
-                      - priority: ${tasks_priority}
-                        scopes:
-                          $if: 'is_repo_trusted'
-                          then:
-                            - project:mobile:android-components:releng:beetmover:bucket:maven-production
-                          else:
-                            - project:mobile:android-components:releng:beetmover:bucket:maven-staging
+                      - scopes:
+                          # XXX Replace with your own hook, if you perform staging releases
+                          - assume:hook-id:project-mobile/android-components-snapshot-release
                         payload:
                           command:
                             - >-
-                              git fetch ${repository} --tags
+                              git fetch ${repository} ${head_branch}
                               && git config advice.detachedHead false
-                              && git checkout ${tag}
+                              && git checkout ${head_rev}
                               && ./gradlew --no-daemon --version
-                              && python automation/taskcluster/decision_task_publish.py --version "${tag}"
+                              && python automation/taskcluster/decision_task.py release --snapshot
                               ${command_staging_flag}
+                        extra:
+                          cron: {$json: {$eval: 'cron'}}
                         metadata:
-                          name: Android Components - Decision task (${tag})
-                          description: Build and publish release versions.
-              - $if: 'tasks_for == "cron"'
-                then:
-                  $mergeDeep:
-                    - {$eval: 'default_task_definition'}
-                    - {$eval: 'nightly_or_release_definition'}
-                    - scopes:
-                        $if: 'is_repo_trusted'
-                        then:
-                          - project:mobile:android-components:releng:beetmover:bucket:maven-snapshot-production
-                        else:
-                          - project:mobile:android-components:releng:beetmover:bucket:maven-snapshot-staging
-                      payload:
-                        command:
-                          - >-
-                            git fetch ${repository} ${head_branch}
-                            && git config advice.detachedHead false
-                            && git checkout ${head_rev}
-                            && ./gradlew --no-daemon --version
-                            && python automation/taskcluster/decision_task_publish.py --snapshot
-                            ${command_staging_flag}
-                      extra:
-                        cron: {$json: {$eval: 'cron'}}
-                      metadata:
-                        name: Android Components - Decision task for Snapshot release
-                        description: Schedules the snapshot release of Android components.
+                          name: Android Components - Decision task for Snapshot release
+                          description: Schedules the snapshot release of Android components.

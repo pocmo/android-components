@@ -6,8 +6,11 @@ package mozilla.components.browser.session
 
 import android.graphics.Bitmap
 import mozilla.components.browser.session.engine.EngineSessionHolder
+import mozilla.components.browser.session.manifest.WebAppManifest
 import mozilla.components.browser.session.tab.CustomTabConfig
 import mozilla.components.concept.engine.HitResult
+import mozilla.components.concept.engine.media.Media
+import mozilla.components.concept.engine.media.RecordingDevice
 import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
@@ -52,6 +55,7 @@ class Session(
         fun onSearch(session: Session, searchTerms: String) = Unit
         fun onSecurityChanged(session: Session, securityInfo: SecurityInfo) = Unit
         fun onCustomTabConfigChanged(session: Session, customTabConfig: CustomTabConfig?) = Unit
+        fun onWebAppManifestChanged(session: Session, manifest: WebAppManifest?) = Unit
         fun onDownload(session: Session, download: Download): Boolean = false
         fun onTrackerBlockingEnabledChanged(session: Session, blockingEnabled: Boolean) = Unit
         fun onTrackerBlocked(session: Session, blocked: String, all: List<String>) = Unit
@@ -65,6 +69,13 @@ class Session(
         fun onPromptRequested(session: Session, promptRequest: PromptRequest): Boolean = false
         fun onOpenWindowRequested(session: Session, windowRequest: WindowRequest): Boolean = false
         fun onCloseWindowRequested(session: Session, windowRequest: WindowRequest): Boolean = false
+        fun onMediaRemoved(session: Session, media: List<Media>, removed: Media) = Unit
+        fun onMediaAdded(session: Session, media: List<Media>, added: Media) = Unit
+        fun onCrashStateChanged(session: Session, crashed: Boolean) = Unit
+        fun onIconChanged(session: Session, icon: Bitmap?) = Unit
+        fun onReaderableStateUpdated(session: Session, readerable: Boolean) = Unit
+        fun onReaderModeChanged(session: Session, enabled: Boolean) = Unit
+        fun onRecordingDevicesChanged(session: Session, devices: List<RecordingDevice>) = Unit
     }
 
     /**
@@ -179,10 +190,12 @@ class Session(
     }
 
     /**
-     * The currently / last used search terms.
+     * The currently / last used search terms (or an empty string).
      */
     var searchTerms: String by Delegates.observable("") {
-        _, _, new -> notifyObservers { if (!new.isEmpty()) onSearch(this@Session, new) }
+        _, _, new -> notifyObservers {
+            onSearch(this@Session, new)
+        }
     }
 
     /**
@@ -201,11 +214,37 @@ class Session(
     }
 
     /**
+     * The Web App Manifest for the currently visited page (or null).
+     */
+    var webAppManifest: WebAppManifest? by Delegates.observable<WebAppManifest?>(null) {
+        _, _, new -> notifyObservers { onWebAppManifestChanged(this@Session, new) }
+    }
+
+    /**
      * Last download request if it wasn't consumed by at least one observer.
      */
     var download: Consumable<Download> by Delegates.vetoable(Consumable.empty()) { _, _, download ->
         val consumers = wrapConsumers<Download> { onDownload(this@Session, it) }
         !download.consumeBy(consumers)
+    }
+
+    /**
+     * List of [Media] on the currently visited page.
+     */
+    var media: List<Media> by Delegates.observable(emptyList()) { _, old, new ->
+        if (old.size > new.size) {
+            val removed = old - new
+            require(removed.size == 1) { "Expected only one item to be removed, but was ${removed.size}" }
+            notifyObservers {
+                onMediaRemoved(this@Session, new, removed[0])
+            }
+        } else if (new.size > old.size) {
+            val added = new - old
+            require(added.size == 1) { "Expected only one item to be added, but was ${added.size}" }
+            notifyObservers {
+                onMediaAdded(this@Session, new, added[0])
+            }
+        }
     }
 
     /**
@@ -267,6 +306,13 @@ class Session(
     }
 
     /**
+     * An icon for the currently visible page.
+     */
+    var icon: Bitmap? by Delegates.observable<Bitmap?>(null) { _, old, new ->
+        notifyObservers(old, new) { onIconChanged(this@Session, new) }
+    }
+
+    /**
      * [Consumable] permission request from web content. A [PermissionRequest]
      * must be consumed i.e. either [PermissionRequest.grant] or
      * [PermissionRequest.reject] must be called. A content permission request
@@ -317,14 +363,48 @@ class Session(
     }
 
     /**
+     * Whether this [Session] has crashed.
+     *
+     * In conjunction with a `concept-engine` implementation that uses a multi-process architecture, single sessions
+     * can crash without crashing the whole app.
+     *
+     * A crashed session may still be operational (since the underlying engine implementation has recovered its content
+     * process), but further action may be needed to restore the last state before the session has crashed (if desired).
+     */
+    var crashed: Boolean by Delegates.observable(false) { _, old, new ->
+        notifyObservers(old, new) { onCrashStateChanged(this@Session, new) }
+    }
+
+    /**
+     * Readerable state, whether or not the current page can be shown in a reader view.
+     */
+    var readerable: Boolean by Delegates.observable(false) { _, _, new ->
+        notifyObservers { onReaderableStateUpdated(this@Session, new) }
+    }
+
+    /**
+     * Reader mode state, whether or not reader view is enabled, otherwise false.
+     */
+    var readerMode: Boolean by Delegates.observable(false) { _, old, new ->
+        notifyObservers(old, new) { onReaderModeChanged(this@Session, new) }
+    }
+
+    /**
+     * List of recording devices (e.g. camera or microphone) currently in use by web content.
+     */
+    var recordingDevices: List<RecordingDevice> by Delegates.observable(emptyList()) { _, old, new ->
+        notifyObservers(old, new) { onRecordingDevicesChanged(this@Session, new) }
+    }
+
+    /**
      * Returns whether or not this session is used for a Custom Tab.
      */
     fun isCustomTabSession() = customTabConfig != null
 
     /**
-     * Helper method to notify observers.
+     * Helper method to notify observers only if a value changed.
      */
-    private fun notifyObservers(old: Any, new: Any, block: Observer.() -> Unit) {
+    private fun notifyObservers(old: Any?, new: Any?, block: Observer.() -> Unit) {
         if (old != new) {
             notifyObservers(block)
         }

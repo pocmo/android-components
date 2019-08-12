@@ -10,13 +10,17 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.session.Session.Source
+import mozilla.components.browser.session.manifest.WebAppManifest
 import mozilla.components.browser.session.tab.CustomTabConfig
 import mozilla.components.concept.engine.HitResult
+import mozilla.components.concept.engine.media.Media
+import mozilla.components.concept.engine.media.RecordingDevice
 import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.support.base.observer.Consumable
 import mozilla.components.support.test.any
+import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.eq
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
@@ -34,6 +38,7 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
+import java.lang.IllegalArgumentException
 
 class SessionTest {
     @Test
@@ -151,7 +156,6 @@ class SessionTest {
         val session = Session("https://www.mozilla.org")
         session.register(observer)
 
-        session.searchTerms = ""
         session.searchTerms = "mozilla android"
 
         assertEquals("mozilla android", session.searchTerms)
@@ -204,6 +208,37 @@ class SessionTest {
 
         assertNotNull(config)
         assertEquals("id", config!!.id)
+    }
+
+    @Test
+    fun `observer is notified when web app manifest is set`() {
+        val manifest = WebAppManifest(
+            name = "HackerWeb",
+            description = "A simply readable Hacker News app.",
+            startUrl = ".",
+            display = WebAppManifest.DisplayMode.STANDALONE,
+            icons = listOf(
+                WebAppManifest.Icon(
+                    src = "images/touch/homescreen192.png",
+                    sizes = listOf(WebAppManifest.Icon.Size(192, 192)),
+                    type = "image/png"
+                )
+            )
+        )
+
+        val observer: Session.Observer = mock()
+
+        val session = Session("https://www.mozilla.org")
+        session.register(observer)
+
+        assertNull(session.webAppManifest)
+
+        session.webAppManifest = manifest
+        assertEquals(manifest, session.webAppManifest)
+
+        val captor = argumentCaptor<WebAppManifest>()
+        verify(observer).onWebAppManifestChanged(eq(session), captor.capture())
+        assertEquals(manifest, captor.value)
     }
 
     @Test
@@ -571,6 +606,12 @@ class SessionTest {
         defaultObserver.onPromptRequested(session, promptRequest)
         defaultObserver.onOpenWindowRequested(session, windowRequest)
         defaultObserver.onCloseWindowRequested(session, windowRequest)
+        defaultObserver.onWebAppManifestChanged(session, mock())
+        defaultObserver.onMediaAdded(session, emptyList(), mock())
+        defaultObserver.onMediaRemoved(session, emptyList(), mock())
+        defaultObserver.onIconChanged(session, mock())
+        defaultObserver.onReaderableStateUpdated(session, true)
+        defaultObserver.onRecordingDevicesChanged(session, emptyList())
     }
 
     @Test
@@ -745,5 +786,216 @@ class SessionTest {
                 def2.await()
             }
         }
+    }
+
+    @Test
+    fun `toString returns string containing id and url`() {
+        val session = Session(id = "my-session-id", initialUrl = "https://www.mozilla.org")
+        assertEquals("Session(my-session-id, https://www.mozilla.org)", session.toString())
+    }
+
+    @Test
+    fun `observer is notified when media is added`() {
+        var observedList: List<Media>? = null
+        var observedMedia: Media? = null
+
+        val observer = object : Session.Observer {
+            override fun onMediaAdded(session: Session, media: List<Media>, added: Media) {
+                observedList = media
+                observedMedia = added
+            }
+        }
+
+        val session = Session("https://www.mozilla.org")
+        session.register(observer)
+
+        val addedMedia1: Media = mock()
+        session.media = listOf(addedMedia1)
+
+        assertEquals(addedMedia1, observedMedia)
+        assertEquals(listOf(addedMedia1), observedList)
+
+        val addedMedia2: Media = mock()
+        session.media = listOf(addedMedia1, addedMedia2)
+
+        assertEquals(addedMedia2, observedMedia)
+        assertEquals(listOf(addedMedia1, addedMedia2), observedList)
+
+        val addedMedia3: Media = mock()
+        session.media = listOf(addedMedia1, addedMedia3, addedMedia2)
+
+        assertEquals(addedMedia3, observedMedia)
+        assertEquals(listOf(addedMedia1, addedMedia3, addedMedia2), observedList)
+    }
+
+    @Test
+    fun `observer is notified when media is removed`() {
+        var observedList: List<Media>? = null
+        var observedMedia: Media? = null
+
+        val observer = object : Session.Observer {
+            override fun onMediaRemoved(session: Session, media: List<Media>, removed: Media) {
+                observedList = media
+                observedMedia = removed
+            }
+        }
+
+        val media1: Media = mock()
+        val media2: Media = mock()
+        val media3: Media = mock()
+
+        val session = Session("https://www.mozilla.org")
+        session.media = listOf(media1)
+        session.media = listOf(media1, media2)
+        session.media = listOf(media1, media2, media3)
+        session.register(observer)
+
+        session.media = listOf(media1, media2)
+
+        assertEquals(media3, observedMedia)
+        assertEquals(listOf(media1, media2), observedList)
+
+        session.media = listOf(media2)
+
+        assertEquals(media1, observedMedia)
+        assertEquals(listOf(media2), observedList)
+
+        session.media = listOf()
+
+        assertEquals(media2, observedMedia)
+        assertEquals(emptyList<Media>(), observedList)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `Session throws if more than one Media object is added at a time`() {
+        val session = Session("https://www.mozilla.org")
+        session.media = listOf(mock(), mock())
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `Session throws if more than one Media object is removed at a time`() {
+        val session = Session("https://www.mozilla.org")
+
+        val media1: Media = mock()
+        val media2: Media = mock()
+        val media3: Media = mock()
+
+        session.media = listOf(media1)
+        session.media = listOf(media1, media2)
+        session.media = listOf(media1, media2, media3)
+
+        session.media = listOf(media1)
+    }
+
+    @Test
+    fun `WHEN crashed state changes THEN observers are notified`() {
+        val session = Session("https://www.mozilla.org")
+
+        var observedCrashState: Boolean? = null
+
+        session.register(object : Session.Observer {
+            override fun onCrashStateChanged(session: Session, crashed: Boolean) {
+                observedCrashState = crashed
+            }
+        })
+
+        assertFalse(session.crashed)
+
+        session.crashed = true
+        assertTrue(session.crashed)
+        assertTrue(observedCrashState!!)
+        observedCrashState = null
+
+        session.crashed = false
+        assertFalse(session.crashed)
+        assertFalse(observedCrashState!!)
+    }
+
+    @Test
+    fun `Observer is notified when icon is added and removed`() {
+        var notifiedIcon: Bitmap? = null
+
+        val session = Session("https://www.mozilla.org")
+        session.register(object : Session.Observer {
+            override fun onIconChanged(session: Session, icon: Bitmap?) {
+                notifiedIcon = icon
+            }
+        })
+
+        val bitmapMock: Bitmap = mock()
+        session.icon = bitmapMock
+
+        assertEquals(bitmapMock, notifiedIcon)
+
+        session.icon = null
+
+        assertNull(notifiedIcon)
+
+        session.icon = bitmapMock
+
+        assertEquals(bitmapMock, notifiedIcon)
+    }
+
+    @Test
+    fun `observer is notified when readerable state updated`() {
+        val observer = mock(Session.Observer::class.java)
+
+        val session = Session("https://www.mozilla.org")
+        session.register(observer)
+        assertFalse(session.readerable)
+
+        session.readerable = true
+
+        verify(observer).onReaderableStateUpdated(
+                eq(session),
+                eq(true))
+
+        // We want to notify observers every time readerability is determined,
+        // not only when the state changed.
+        session.readerable = true
+
+        verify(observer, times(2)).onReaderableStateUpdated(
+                eq(session),
+                eq(true))
+
+        assertTrue(session.readerable)
+    }
+
+    @Test
+    fun `observer is notified when reader mode state changes`() {
+        val observer = mock(Session.Observer::class.java)
+
+        val session = Session("https://www.mozilla.org")
+        session.register(observer)
+        assertFalse(session.readerMode)
+
+        session.readerMode = true
+
+        verify(observer).onReaderModeChanged(
+                eq(session),
+                eq(true))
+
+        assertTrue(session.readerMode)
+    }
+
+    @Test
+    fun `observer is notified when recording devices change`() {
+        val observer = mock(Session.Observer::class.java)
+
+        val session = Session("https://www.mozilla.org")
+        session.register(observer)
+
+        assertTrue(session.recordingDevices.isEmpty())
+
+        val twoDevices = listOf(
+            RecordingDevice(RecordingDevice.Type.MICROPHONE, RecordingDevice.Status.RECORDING),
+            RecordingDevice(RecordingDevice.Type.CAMERA, RecordingDevice.Status.INACTIVE)
+        )
+        session.recordingDevices = twoDevices
+        verify(observer).onRecordingDevicesChanged(session, twoDevices)
+
+        val oneDevice = listOf(RecordingDevice(RecordingDevice.Type.MICROPHONE, RecordingDevice.Status.RECORDING))
+        session.recordingDevices = oneDevice
+        verify(observer).onRecordingDevicesChanged(session, oneDevice)
     }
 }

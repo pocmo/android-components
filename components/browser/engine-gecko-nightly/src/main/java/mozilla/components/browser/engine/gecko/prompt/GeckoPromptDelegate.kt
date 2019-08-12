@@ -4,9 +4,11 @@
 
 package mozilla.components.browser.engine.gecko.prompt
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
-import android.support.annotation.VisibleForTesting
+import android.provider.OpenableColumns
+import androidx.annotation.VisibleForTesting
 import mozilla.components.browser.engine.gecko.GeckoEngineSession
 import mozilla.components.concept.engine.prompt.Choice
 import mozilla.components.concept.engine.prompt.PromptRequest.TimeSelection
@@ -34,6 +36,7 @@ import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.support.ktx.kotlin.toDate
 import mozilla.components.concept.engine.prompt.PromptRequest.Authentication.Level
 import mozilla.components.concept.engine.prompt.PromptRequest.Authentication.Method
+import mozilla.components.support.base.log.logger.Logger
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_FLAG_CROSS_ORIGIN_SUB_RESOURCE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_FLAG_HOST
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_FLAG_ONLY_PASSWORD
@@ -41,11 +44,17 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_FLAG_P
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_NONE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_PW_ENCRYPTED
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_SECURE
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEGATIVE
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEUTRAL
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_POSITIVE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATETIME_LOCAL
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_MONTH
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_TIME
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_WEEK
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.security.InvalidParameterException
 
 typealias GeckoChoice = GeckoSession.PromptDelegate.Choice
@@ -65,40 +74,24 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
         geckoChoices: Array<out GeckoChoice>,
         callback: ChoiceCallback
     ) {
-        val pair = convertToChoices(geckoChoices)
-        // An array of all the GeckoChoices transformed as local Choices object.
-        val choices = pair.first
-        // A map that contains all local choices and map to GeckoChoices
-        val mapChoicesToGeckoChoices = pair.second
+        val choices = convertToChoices(geckoChoices)
+        val onConfirmSingleChoice: (Choice) -> Unit = { selectedChoice ->
+            callback.confirm(selectedChoice.id)
+        }
+        val onConfirmMultipleSelection: (Array<Choice>) -> Unit = { selectedChoices ->
+            val ids = selectedChoices.toIdsArray()
+            callback.confirm(ids)
+        }
 
-        when (type) {
+        val promptRequest = when (type) {
+            CHOICE_TYPE_SINGLE -> SingleChoice(choices, onConfirmSingleChoice)
+            CHOICE_TYPE_MENU -> MenuChoice(choices, onConfirmSingleChoice)
+            CHOICE_TYPE_MULTIPLE -> MultipleChoice(choices, onConfirmMultipleSelection)
+            else -> throw InvalidParameterException("$type is not a valid Gecko @Choice.ChoiceType")
+        }
 
-            CHOICE_TYPE_SINGLE -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(SingleChoice(choices) { selectedChoice ->
-                        val geckoChoice = mapChoicesToGeckoChoices[selectedChoice]
-                        callback.confirm(geckoChoice!!)
-                    })
-                }
-            }
-
-            CHOICE_TYPE_MENU -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(MenuChoice(choices) { selectedChoice ->
-                        val geckoChoice = mapChoicesToGeckoChoices[selectedChoice]
-                        callback.confirm(geckoChoice!!)
-                    })
-                }
-            }
-
-            CHOICE_TYPE_MULTIPLE -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(MultipleChoice(choices) { choices ->
-                        val ids = choices.toIdsArray()
-                        callback.confirm(ids)
-                    })
-                }
-            }
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(promptRequest)
         }
     }
 
@@ -131,13 +124,17 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
     ) {
 
         val onSelectMultiple: (Context, Array<Uri>) -> Unit = { context, uris ->
-            callback.confirm(context, uris)
+            val filesUris = uris.map {
+                it.toFileUri(context)
+            }.toTypedArray()
+
+            callback.confirm(context, filesUris)
         }
 
         val isMultipleFilesSelection = selectionType == GeckoSession.PromptDelegate.FILE_TYPE_MULTIPLE
 
         val onSelectSingle: (Context, Uri) -> Unit = { context, uri ->
-            callback.confirm(context, uri)
+            callback.confirm(context, uri.toFileUri(context))
         }
 
         val onDismiss: () -> Unit = {
@@ -289,43 +286,85 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
         }
     }
 
+    override fun onPopupRequest(session: GeckoSession, targetUri: String?): GeckoResult<AllowOrDeny> {
+        val geckoResult = GeckoResult<AllowOrDeny>()
+        val onAllow: () -> Unit = { geckoResult.complete(AllowOrDeny.ALLOW) }
+        val onDeny: () -> Unit = { geckoResult.complete(AllowOrDeny.DENY) }
+
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(
+                PromptRequest.Popup(targetUri ?: "", onAllow, onDeny)
+            )
+        }
+        return geckoResult
+    }
+
     override fun onButtonPrompt(
         session: GeckoSession,
         title: String?,
-        msg: String?,
-        btnMsg: Array<out String>?,
+        message: String?,
+        buttonTitles: Array<out String?>?,
         callback: ButtonCallback
-    ) = Unit
+    ) {
+        val hasShownManyDialogs = callback.hasCheckbox()
+        val positiveButtonTitle = buttonTitles?.get(BUTTON_TYPE_POSITIVE) ?: ""
+        val negativeButtonTitle = buttonTitles?.get(BUTTON_TYPE_NEGATIVE) ?: ""
+        val neutralButtonTitle = buttonTitles?.get(BUTTON_TYPE_NEUTRAL) ?: ""
 
-    override fun onPopupRequest(session: GeckoSession, targetUri: String?): GeckoResult<AllowOrDeny> {
-        return GeckoResult()
-    } // Related issue: https://github.com/mozilla-mobile/android-components/issues/1473
+        val onConfirmPositiveButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_POSITIVE)
+        }
+
+        val onConfirmNegativeButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_NEGATIVE)
+        }
+
+        val onConfirmNeutralButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_NEUTRAL)
+        }
+
+        val onDismiss: () -> Unit = {
+            callback.dismiss()
+        }
+
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(
+                PromptRequest.Confirm(
+                    title ?: "",
+                    message ?: "",
+                    hasShownManyDialogs,
+                    positiveButtonTitle,
+                    negativeButtonTitle,
+                    neutralButtonTitle,
+                    onConfirmPositiveButton,
+                    onConfirmNegativeButton,
+                    onConfirmNeutralButton,
+                    onDismiss
+                )
+            )
+        }
+    }
 
     private fun GeckoChoice.toChoice(): Choice {
         val choiceChildren = items?.map { it.toChoice() }?.toTypedArray()
-        return Choice(id, !disabled, label ?: "", selected, separator, choiceChildren)
+        return Choice(id, !disabled, label, selected, separator, choiceChildren)
     }
 
     /**
-     * Convert an array of [GeckoChoice] to [Choice].
-     *
-     * @property geckoChoices The ID of the option or group.
-     * @return A [Pair] with all the [GeckoChoice] converted to [Choice]
-     * and a map where you find is [GeckoChoice] representation .
+     * Convert an array of [GeckoChoice] to Choice array.
+     * @return array of Choice
      */
     private fun convertToChoices(
         geckoChoices: Array<out GeckoChoice>
-    ): Pair<Array<Choice>, HashMap<Choice, GeckoChoice>> {
+    ): Array<Choice> {
 
-        val mapChoicesToGeckoChoices = HashMap<Choice, GeckoChoice>()
-
-        val arrayOfChoices = geckoChoices.map { geckoChoice ->
+        return geckoChoices.map { geckoChoice ->
             val choice = geckoChoice.toChoice()
-            mapChoicesToGeckoChoices[choice] = geckoChoice
             choice
         }.toTypedArray()
-
-        return Pair(arrayOfChoices, mapChoicesToGeckoChoices)
     }
 
     @Suppress("LongParameterList")
@@ -370,6 +409,41 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
 
     private operator fun Int.contains(mask: Int): Boolean {
         return (this and mask) != 0
+    }
+
+    private fun Uri.toFileUri(context: Context): Uri {
+        val uri = this
+        val cacheUploadDirectory = java.io.File(context.cacheDir, "/uploads")
+
+        if (!cacheUploadDirectory.exists()) {
+            cacheUploadDirectory.mkdir()
+        }
+
+        val temporalFile = java.io.File(cacheUploadDirectory, uri.getFileName(context))
+        try {
+            (context.contentResolver.openInputStream(uri) as FileInputStream).use { inStream ->
+                FileOutputStream(temporalFile).use { outStream ->
+                    inStream.copyTo(outStream)
+                }
+            }
+        } catch (e: IOException) {
+            val logger = Logger("GeckoPromptDelegate")
+            logger.warn("Could not convert uri to file uri", e)
+        }
+        return Uri.parse("file:///" + temporalFile.absolutePath)
+    }
+
+    @SuppressLint("Recycle")
+    private fun Uri.getFileName(context: Context): String {
+        var fileName = ""
+        this.let { returnUri ->
+            context.contentResolver.query(returnUri, null, null, null, null)
+        }?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            cursor.moveToFirst()
+            fileName = cursor.getString(nameIndex)
+        }
+        return fileName
     }
 }
 

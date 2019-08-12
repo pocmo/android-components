@@ -47,6 +47,8 @@ interface PermissionRequest {
      * Rejects the requested permissions.
      */
     fun reject()
+
+    fun containsVideoAndAudioSources() = false
 }
 
 /**
@@ -55,11 +57,11 @@ interface PermissionRequest {
  * @property id an optional native engine-specific ID of this permission.
  * @property desc an optional description of what this permission type is for.
  */
+
 sealed class Permission(open val id: String? = "", open val desc: String? = "") {
     data class ContentAudioCapture(override val id: String? = "", override val desc: String? = "") : Permission(id)
     data class ContentAudioMicrophone(override val id: String? = "", override val desc: String? = "") : Permission(id)
     data class ContentAudioOther(override val id: String? = "", override val desc: String? = "") : Permission(id)
-    data class ContentAutoplayMedia(override val id: String? = "", override val desc: String? = "") : Permission(id)
     data class ContentGeoLocation(override val id: String? = "", override val desc: String? = "") : Permission(id)
     data class ContentNotification(override val id: String? = "", override val desc: String? = "") : Permission(id)
     data class ContentProtectedMediaId(override val id: String? = "", override val desc: String? = "") : Permission(id)

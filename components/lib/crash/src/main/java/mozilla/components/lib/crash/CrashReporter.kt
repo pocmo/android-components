@@ -7,8 +7,8 @@ package mozilla.components.lib.crash
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.support.annotation.StyleRes
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.StyleRes
+import androidx.annotation.VisibleForTesting
 import mozilla.components.lib.crash.handler.ExceptionHandler
 import mozilla.components.lib.crash.prompt.CrashReporterActivity
 import mozilla.components.lib.crash.service.CrashReporterService
@@ -59,7 +59,7 @@ class CrashReporter(
      * Install this [CrashReporter] instance. At this point the component will be setup to collect crash reports.
      */
     fun install(applicationContext: Context): CrashReporter {
-        CrashReporter.instance = this
+        instance = this
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         val handler = ExceptionHandler(applicationContext, this, defaultHandler)
@@ -161,9 +161,11 @@ class CrashReporter(
     )
 
     companion object {
+        @Volatile
         private var instance: CrashReporter? = null
 
-        @VisibleForTesting internal fun reset() {
+        @VisibleForTesting
+        internal fun reset() {
             instance = null
         }
 

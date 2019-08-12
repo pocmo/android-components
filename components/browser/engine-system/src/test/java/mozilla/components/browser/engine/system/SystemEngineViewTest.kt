@@ -9,19 +9,23 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslCertificate
 import android.net.http.SslError
+import android.os.Build
 import android.os.Bundle
 import android.os.Message
 import android.view.View
+import android.webkit.HttpAuthHandler
+import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.SslErrorHandler
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
-import android.webkit.ValueCallback
-import android.webkit.WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
-import android.webkit.WebViewClient
 import android.webkit.WebView.HitTestResult
+import android.webkit.WebViewClient
+import android.webkit.WebViewDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import kotlinx.coroutines.runBlocking
@@ -37,6 +41,9 @@ import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.concept.engine.window.WindowRequest
+import mozilla.components.concept.storage.VisitType
+import mozilla.components.support.test.any
+import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.eq
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
@@ -53,11 +60,13 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.reset
+import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyZeroInteractions
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import java.util.Calendar
 import java.util.Calendar.SECOND
 import java.util.Calendar.YEAR
@@ -234,7 +243,7 @@ class SystemEngineViewTest {
             override fun onProgress(progress: Int) { observedProgress = progress }
         })
 
-        engineSession.webView.webChromeClient.onProgressChanged(null, 100)
+        engineSession.webView.webChromeClient!!.onProgressChanged(null, 100)
         assertEquals(100, observedProgress)
     }
 
@@ -284,12 +293,37 @@ class SystemEngineViewTest {
         engineSession.webView.webViewClient.doUpdateVisitedHistory(webView, "https://www.mozilla.com", false)
 
         engineSession.settings.historyTrackingDelegate = historyDelegate
+        `when`(historyDelegate.shouldStoreUri(any())).thenReturn(true)
 
         engineSession.webView.webViewClient.doUpdateVisitedHistory(webView, "https://www.mozilla.com", false)
-        verify(historyDelegate).onVisited(eq("https://www.mozilla.com"), eq(false))
+        verify(historyDelegate).onVisited(eq("https://www.mozilla.com"), eq(VisitType.LINK))
 
         engineSession.webView.webViewClient.doUpdateVisitedHistory(webView, "https://www.mozilla.com", true)
-        verify(historyDelegate).onVisited(eq("https://www.mozilla.com"), eq(true))
+        verify(historyDelegate).onVisited(eq("https://www.mozilla.com"), eq(VisitType.RELOAD))
+    }
+
+    @Test
+    fun `WebView client checks with the delegate if the URI visit should be recorded`() = runBlocking {
+        val engineSession = SystemEngineSession(getApplicationContext())
+        val engineView = SystemEngineView(getApplicationContext())
+        val webView: WebView = mock()
+        engineView.render(engineSession)
+
+        val historyDelegate: HistoryTrackingDelegate = mock()
+        engineSession.settings.historyTrackingDelegate = historyDelegate
+
+        `when`(historyDelegate.shouldStoreUri("https://www.mozilla.com")).thenReturn(true)
+
+        // Verify that engine session asked delegate if uri should be stored.
+        engineSession.webView.webViewClient.doUpdateVisitedHistory(webView, "https://www.mozilla.com", false)
+        verify(historyDelegate).onVisited(eq("https://www.mozilla.com"), eq(VisitType.LINK))
+        verify(historyDelegate).shouldStoreUri("https://www.mozilla.com")
+
+        // Verify that engine won't try to store a uri that delegate doesn't want.
+        engineSession.webView.webViewClient.doUpdateVisitedHistory(webView, "https://www.mozilla.com/not-allowed", false)
+        verify(historyDelegate, never()).onVisited(eq("https://www.mozilla.com/not-allowed"), any())
+        verify(historyDelegate).shouldStoreUri("https://www.mozilla.com/not-allowed")
+        Unit
     }
 
     @Test
@@ -298,8 +332,12 @@ class SystemEngineViewTest {
 
         val engineView = SystemEngineView(getApplicationContext())
         val historyDelegate = object : HistoryTrackingDelegate {
-            override suspend fun onVisited(uri: String, isReload: Boolean) {
+            override suspend fun onVisited(uri: String, type: VisitType) {
                 fail()
+            }
+
+            override fun shouldStoreUri(uri: String): Boolean {
+                return true
             }
 
             override suspend fun onTitleChanged(uri: String, title: String) {
@@ -319,13 +357,13 @@ class SystemEngineViewTest {
         engineView.render(engineSession)
 
         // Nothing breaks if delegate isn't set.
-        engineSession.webView.webChromeClient.getVisitedHistory(mock())
+        engineSession.webView.webChromeClient!!.getVisitedHistory(mock())
 
         engineSession.settings.historyTrackingDelegate = historyDelegate
 
         val historyValueCallback: ValueCallback<Array<String>> = mock()
         runBlocking {
-            engineSession.webView.webChromeClient.getVisitedHistory(historyValueCallback)
+            engineSession.webView.webChromeClient!!.getVisitedHistory(historyValueCallback)
         }
         verify(historyValueCallback).onReceiveValue(arrayOf("https://www.mozilla.com"))
     }
@@ -341,26 +379,26 @@ class SystemEngineViewTest {
         engineView.render(engineSession)
 
         // Nothing breaks if delegate isn't set.
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, "New title!")
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, "New title!")
 
         // We can now set the delegate. Were it set before the render call,
         // it'll get overwritten during settings initialization.
         engineSession.settings.historyTrackingDelegate = historyDelegate
 
         // Delegate not notified if, somehow, there's no currentUrl present in the view.
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, "New title!")
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, "New title!")
         verify(historyDelegate, never()).onTitleChanged(eq(""), eq("New title!"))
 
         // This sets the currentUrl.
         engineSession.webView.webViewClient.onPageStarted(webView, "https://www.mozilla.org/", null)
 
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, "New title!")
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, "New title!")
         verify(historyDelegate).onTitleChanged(eq("https://www.mozilla.org/"), eq("New title!"))
 
         reset(historyDelegate)
 
         // Empty title when none provided
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, null)
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, null)
         verify(historyDelegate).onTitleChanged(eq("https://www.mozilla.org/"), eq(""))
     }
 
@@ -376,14 +414,14 @@ class SystemEngineViewTest {
 
         engineSession.register(observer)
         engineView.render(engineSession)
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, "Hello World!")
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, "Hello World!")
         verify(observer).onTitleChange(eq("Hello World!"))
         verify(observer).onNavigationStateChange(true, true)
 
         reset(observer)
 
         // Empty title when none provided.
-        engineSession.webView.webChromeClient.onReceivedTitle(webView, null)
+        engineSession.webView.webChromeClient!!.onReceivedTitle(webView, null)
         verify(observer).onTitleChange(eq(""))
         verify(observer).onNavigationStateChange(true, true)
     }
@@ -445,7 +483,7 @@ class SystemEngineViewTest {
         engineSession.trackingProtectionPolicy = EngineSession.TrackingProtectionPolicy.all()
         response = webViewClient.shouldInterceptRequest(engineSession.webView, invalidRequest)
         assertNotNull(response)
-        assertNull(response.data)
+        assertNull(response!!.data)
         assertNull(response.encoding)
         assertNull(response.mimeType)
 
@@ -454,7 +492,7 @@ class SystemEngineViewTest {
         `when`(faviconRequest.url).thenReturn(Uri.parse("http://foo/favicon.ico"))
         response = webViewClient.shouldInterceptRequest(engineSession.webView, faviconRequest)
         assertNotNull(response)
-        assertNull(response.data)
+        assertNull(response!!.data)
         assertNull(response.encoding)
         assertNull(response.mimeType)
 
@@ -463,7 +501,7 @@ class SystemEngineViewTest {
         `when`(blockedRequest.url).thenReturn(Uri.parse("http://blocked.random"))
         response = webViewClient.shouldInterceptRequest(engineSession.webView, blockedRequest)
         assertNotNull(response)
-        assertNull(response.data)
+        assertNull(response!!.data)
         assertNull(response.encoding)
         assertNull(response.mimeType)
     }
@@ -677,7 +715,7 @@ class SystemEngineViewTest {
 
         val response = webViewClient.shouldInterceptRequest(engineSession.webView, webFontRequest)
         assertNotNull(response)
-        assertNull(response.data)
+        assertNull(response!!.data)
         assertNull(response.encoding)
         assertNull(response.mimeType)
     }
@@ -706,26 +744,35 @@ class SystemEngineViewTest {
 
     @Test
     fun `lifecycle methods are invoked`() {
-        val webView = mock(WebView::class.java)
+        val mockWebView = mock(WebView::class.java)
+        val engineSession1 = SystemEngineSession(getApplicationContext())
+        val engineSession2 = SystemEngineSession(getApplicationContext())
+
         val engineView = SystemEngineView(getApplicationContext())
         engineView.onPause()
         engineView.onResume()
         engineView.onDestroy()
 
-        val engineSession = SystemEngineSession(getApplicationContext())
-        engineSession.webView = webView
-        engineView.render(engineSession)
+        engineSession1.webView = mockWebView
+        engineView.render(engineSession1)
+        engineView.onDestroy()
 
-        engineView.onPause()
-        verify(webView, times(1)).onPause()
-        verify(webView, times(1)).pauseTimers()
-
-        engineView.onResume()
-        verify(webView, times(1)).onResume()
-        verify(webView, times(1)).resumeTimers()
+        engineView.render(engineSession2)
+        assertNotNull(engineSession2.webView.parent)
 
         engineView.onDestroy()
-        verify(webView, times(1)).destroy()
+        assertNull(engineSession2.webView.parent)
+
+        engineView.render(engineSession1)
+        engineView.onPause()
+        verify(mockWebView, times(1)).onPause()
+        verify(mockWebView, times(1)).pauseTimers()
+
+        engineView.onResume()
+        verify(mockWebView, times(1)).onResume()
+        verify(mockWebView, times(1)).resumeTimers()
+
+        engineView.onDestroy()
     }
 
     @Test
@@ -739,7 +786,7 @@ class SystemEngineViewTest {
 
         val view = mock(View::class.java)
         val customViewCallback = mock(WebChromeClient.CustomViewCallback::class.java)
-        engineSession.webView.webChromeClient.onShowCustomView(view, customViewCallback)
+        engineSession.webView.webChromeClient!!.onShowCustomView(view, customViewCallback)
 
         verify(observer).onFullScreenChange(true)
     }
@@ -755,13 +802,13 @@ class SystemEngineViewTest {
 
         assertNull(engineSession.fullScreenCallback)
 
-        engineSession.webView.webChromeClient.onShowCustomView(view, customViewCallback)
+        engineSession.webView.webChromeClient!!.onShowCustomView(view, customViewCallback)
 
         assertNotNull(engineSession.fullScreenCallback)
         assertEquals(customViewCallback, engineSession.fullScreenCallback)
         assertEquals("mozac_system_engine_fullscreen", view.tag)
 
-        engineSession.webView.webChromeClient.onHideCustomView()
+        engineSession.webView.webChromeClient!!.onHideCustomView()
         assertEquals(View.VISIBLE, engineSession.webView.visibility)
     }
 
@@ -775,7 +822,7 @@ class SystemEngineViewTest {
         val customViewCallback = mock(WebChromeClient.CustomViewCallback::class.java)
 
         engineSession.webView.tag = "not_webview"
-        engineSession.webView.webChromeClient.onShowCustomView(view, customViewCallback)
+        engineSession.webView.webChromeClient!!.onShowCustomView(view, customViewCallback)
 
         assertNotEquals(View.INVISIBLE, engineSession.webView.visibility)
     }
@@ -790,10 +837,10 @@ class SystemEngineViewTest {
         val customViewCallback = mock(WebChromeClient.CustomViewCallback::class.java)
 
         // When the fullscreen view isn't available
-        engineSession.webView.webChromeClient.onShowCustomView(view, customViewCallback)
+        engineSession.webView.webChromeClient!!.onShowCustomView(view, customViewCallback)
         engineView.findViewWithTag<View>("mozac_system_engine_fullscreen").tag = "not_fullscreen"
 
-        engineSession.webView.webChromeClient.onHideCustomView()
+        engineSession.webView.webChromeClient!!.onHideCustomView()
 
         assertNotNull(engineSession.fullScreenCallback)
         verify(engineSession.fullScreenCallback, never())?.onCustomViewHidden()
@@ -803,7 +850,7 @@ class SystemEngineViewTest {
         engineView.findViewWithTag<View>("not_fullscreen").tag = "mozac_system_engine_fullscreen"
         engineSession.webView.tag = "not_webView"
 
-        engineSession.webView.webChromeClient.onHideCustomView()
+        engineSession.webView.webChromeClient!!.onHideCustomView()
 
         assertEquals(View.INVISIBLE, engineSession.webView.visibility)
     }
@@ -814,44 +861,8 @@ class SystemEngineViewTest {
         val engineView = SystemEngineView(getApplicationContext())
         engineView.render(engineSession)
 
-        engineSession.webView.webChromeClient.onHideCustomView()
+        engineSession.webView.webChromeClient!!.onHideCustomView()
         assertNull(engineSession.fullScreenCallback)
-    }
-
-    @Test
-    fun `when a page is loaded a thumbnail should be captured`() {
-        val engineSession = SystemEngineSession(getApplicationContext())
-        val engineView = SystemEngineView(getApplicationContext())
-        engineView.render(engineSession)
-        var thumbnailChanged = false
-        engineSession.register(object : EngineSession.Observer {
-
-            override fun onThumbnailChange(bitmap: Bitmap?) {
-                thumbnailChanged = bitmap != null
-            }
-        })
-
-        engineSession.webView.webViewClient.onPageFinished(null, "http://mozilla.org")
-        assertTrue(thumbnailChanged)
-    }
-
-    @Test
-    fun `when a page is loaded and the os is in low memory condition none thumbnail should be captured`() {
-        val engineSession = SystemEngineSession(getApplicationContext())
-        val engineView = SystemEngineView(getApplicationContext())
-        engineView.render(engineSession)
-
-        engineView.testLowMemory = true
-
-        var thumbnailChanged = false
-        engineSession.register(object : EngineSession.Observer {
-
-            override fun onThumbnailChange(bitmap: Bitmap?) {
-                thumbnailChanged = bitmap != null
-            }
-        })
-        engineSession.webView.webViewClient.onPageFinished(null, "http://mozilla.org")
-        assertFalse(thumbnailChanged)
     }
 
     @Test
@@ -923,10 +934,10 @@ class SystemEngineViewTest {
             }
         })
 
-        engineSession.webView.webChromeClient.onPermissionRequest(permissionRequest)
+        engineSession.webView.webChromeClient!!.onPermissionRequest(permissionRequest)
         assertNotNull(observedPermissionRequest)
 
-        engineSession.webView.webChromeClient.onPermissionRequestCanceled(permissionRequest)
+        engineSession.webView.webChromeClient!!.onPermissionRequestCanceled(permissionRequest)
         assertNotNull(cancelledPermissionRequest)
     }
 
@@ -952,10 +963,10 @@ class SystemEngineViewTest {
             }
         })
 
-        engineSession.webView.webChromeClient.onCreateWindow(mock(WebView::class.java), false, false, null)
+        engineSession.webView.webChromeClient!!.onCreateWindow(mock(WebView::class.java), false, false, null)
         assertNotNull(createWindowRequest)
 
-        engineSession.webView.webChromeClient.onCloseWindow(mock(WebView::class.java))
+        engineSession.webView.webChromeClient!!.onCloseWindow(mock(WebView::class.java))
         assertNotNull(closeWindowRequest)
     }
 
@@ -1192,15 +1203,385 @@ class SystemEngineViewTest {
     }
 
     @Test
-    fun `render removes webview from previous session`() {
+    fun `calling onJsPrompt must provide a TextPrompt PromptRequest`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+
+        engineView.render(engineSession)
+
+        val mockJSPromptResult = mock<JsPromptResult>()
+
+        engineSession.webView.webChromeClient!!.onJsPrompt(
+            mock(),
+            "http://www.mozilla.org",
+            "message",
+            "defaultValue",
+            mockJSPromptResult
+        )
+
+        val textPromptRequest = request as PromptRequest.TextPrompt
+        assertTrue(request is PromptRequest.TextPrompt)
+
+        assertTrue(textPromptRequest.title.contains("mozilla.org"))
+        assertEquals(textPromptRequest.hasShownManyDialogs, false)
+        assertEquals(textPromptRequest.inputLabel, "message")
+        assertEquals(textPromptRequest.inputValue, "defaultValue")
+
+        textPromptRequest.onConfirm(true, "value")
+        verify(mockJSPromptResult).confirm("value")
+        assertEquals(engineView.jsAlertCount, 1)
+
+        textPromptRequest.onDismiss()
+        verify(mockJSPromptResult).cancel()
+
+        textPromptRequest.onConfirm(true, "value")
+        assertEquals(engineView.shouldShowMoreDialogs, false)
+
+        engineView.lastDialogShownAt = engineView.lastDialogShownAt.add(YEAR, -1)
+        engineSession.webView.webChromeClient!!.onJsPrompt(
+            mock(),
+            "http://www.mozilla.org",
+            "message", "defaultValue",
+            mockJSPromptResult
+        )
+
+        assertEquals(engineView.jsAlertCount, 1)
+        verify(mockJSPromptResult, times(2)).cancel()
+
+        engineView.lastDialogShownAt = engineView.lastDialogShownAt.add(YEAR, -1)
+        engineView.jsAlertCount = 100
+        engineView.shouldShowMoreDialogs = true
+
+        engineSession.webView.webChromeClient!!.onJsPrompt(
+            mock(),
+            "http://www.mozilla.org",
+            null,
+            null,
+            mockJSPromptResult
+        )
+
+        assertTrue((request as PromptRequest.TextPrompt).hasShownManyDialogs)
+
+        engineSession.currentUrl = "http://www.mozilla.org"
+        engineSession.webView.webChromeClient!!.onJsPrompt(
+            mock(),
+            null,
+            "message",
+            "defaultValue",
+            mockJSPromptResult
+        )
+        assertTrue((request as PromptRequest.TextPrompt).title.contains("mozilla.org"))
+    }
+
+    @Test
+    fun `calling onJsPrompt with a null session must not provide a TextPrompt PromptRequest`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+
+        engineView.render(engineSession)
+
+        val mockJSPromptResult = mock<JsPromptResult>()
+        engineView.session = null
+
+        val wasTheDialogHandled = engineSession.webView.webChromeClient!!.onJsPrompt(
+            mock(),
+            "http://www.mozilla.org",
+            "message", "defaultValue",
+            mockJSPromptResult
+        )
+
+        assertTrue(wasTheDialogHandled)
+        assertNull(request)
+        verify(mockJSPromptResult).cancel()
+    }
+
+    @Test
+    fun `calling onJsConfirm must provide a Confirm PromptRequest`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+
+        engineView.render(engineSession)
+
+        val mockJSPromptResult = mock<JsResult>()
+
+        engineSession.webView.webChromeClient!!.onJsConfirm(
+            mock(),
+            "http://www.mozilla.org",
+            "message",
+            mockJSPromptResult
+        )
+
+        val confirmPromptRequest = request as PromptRequest.Confirm
+        assertTrue(request is PromptRequest.Confirm)
+
+        assertTrue(confirmPromptRequest.title.contains("mozilla.org"))
+        assertEquals(confirmPromptRequest.hasShownManyDialogs, false)
+        assertEquals(confirmPromptRequest.message, "message")
+        assertEquals(confirmPromptRequest.positiveButtonTitle.toLowerCase(), "OK".toLowerCase())
+        assertEquals(confirmPromptRequest.negativeButtonTitle.toLowerCase(), "Cancel".toLowerCase())
+
+        confirmPromptRequest.onConfirmPositiveButton(true)
+        verify(mockJSPromptResult).confirm()
+        assertEquals(engineView.jsAlertCount, 1)
+
+        confirmPromptRequest.onDismiss()
+        verify(mockJSPromptResult).cancel()
+
+        confirmPromptRequest.onConfirmNegativeButton(true)
+        verify(mockJSPromptResult, times(2)).cancel()
+
+        confirmPromptRequest.onConfirmPositiveButton(true)
+        assertEquals(engineView.shouldShowMoreDialogs, false)
+
+        engineView.lastDialogShownAt = engineView.lastDialogShownAt.add(YEAR, -1)
+        engineSession.webView.webChromeClient!!.onJsConfirm(
+            mock(),
+            "http://www.mozilla.org",
+            "message",
+            mockJSPromptResult
+        )
+
+        assertEquals(engineView.jsAlertCount, 1)
+        verify(mockJSPromptResult, times(3)).cancel()
+
+        engineView.lastDialogShownAt = engineView.lastDialogShownAt.add(YEAR, -1)
+        engineView.jsAlertCount = 100
+        engineView.shouldShowMoreDialogs = true
+
+        engineSession.webView.webChromeClient!!.onJsConfirm(
+            mock(),
+            "http://www.mozilla.org",
+            null,
+            mockJSPromptResult
+        )
+
+        assertTrue((request as PromptRequest.Confirm).hasShownManyDialogs)
+
+        engineSession.currentUrl = "http://www.mozilla.org"
+        engineSession.webView.webChromeClient!!.onJsConfirm(
+            mock(),
+            null,
+            "message",
+            mockJSPromptResult
+        )
+        assertTrue((request as PromptRequest.Confirm).title.contains("mozilla.org"))
+    }
+
+    @Test
+    @Suppress("Deprecation")
+    // TODO remove suppression when fixed: https://github.com/mozilla-mobile/android-components/issues/888
+    fun captureThumbnail() {
         val engineView = SystemEngineView(getApplicationContext())
 
-        val session1 = SystemEngineSession(getApplicationContext())
-        val session2 = SystemEngineSession(getApplicationContext())
-        engineView.render(session1)
-        engineView.render(session2)
+        engineView.session = mock()
 
-        assertNull(session1.webView.parent)
+        `when`(engineView.session!!.webView).thenReturn(mock())
+
+        `when`(engineView.session!!.webView.drawingCache)
+            .thenReturn(Bitmap.createBitmap(10, 10, Bitmap.Config.RGB_565))
+
+        var thumbnail: Bitmap? = null
+
+        engineView.captureThumbnail {
+            thumbnail = it
+        }
+        assertNotNull(thumbnail)
+
+        engineView.session = null
+        engineView.captureThumbnail {
+            thumbnail = it
+        }
+
+        assertNull(thumbnail)
+    }
+
+    @Test
+    fun `calling onReceivedHttpAuthRequest must provide an Authentication PromptRequest`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+        engineView.render(engineSession)
+
+        val authHandler = mock<HttpAuthHandler>()
+        val host = "mozilla.org"
+        val realm = "realm"
+
+        engineSession.webView.webViewClient.onReceivedHttpAuthRequest(engineSession.webView, authHandler, host, realm)
+
+        val authRequest = request as PromptRequest.Authentication
+        assertTrue(request is PromptRequest.Authentication)
+
+        assertEquals(authRequest.title, "")
+
+        authRequest.onConfirm("u", "p")
+        verify(authHandler).proceed("u", "p")
+
+        authRequest.onDismiss()
+        verify(authHandler).cancel()
+    }
+
+    @Test
+    fun `calling onReceivedHttpAuthRequest with a null session must not provide an Authentication PromptRequest`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+        engineView.render(engineSession)
+
+        val authHandler = mock<HttpAuthHandler>()
+        engineView.session = null
+
+        engineSession.webView.webViewClient.onReceivedHttpAuthRequest(mock(), authHandler, "mozilla.org", "realm")
+
+        assertNull(request)
+        verify(authHandler).cancel()
+    }
+
+    @Test
+    fun `onReceivedHttpAuthRequest correctly handles realm`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+        engineView.render(engineSession)
+
+        val webView = engineSession.webView
+        val authHandler = mock<HttpAuthHandler>()
+        val host = "mozilla.org"
+
+        val longRealm = "Login with a user name of httpwatch and a different password each time"
+        webView.webViewClient.onReceivedHttpAuthRequest(webView, authHandler, host, longRealm)
+        assertTrue((request as PromptRequest.Authentication).message.endsWith("differen…”"))
+
+        val emptyRealm = ""
+        webView.webViewClient.onReceivedHttpAuthRequest(webView, authHandler, host, emptyRealm)
+        val noRealmMessageTail = context.getString(R.string.mozac_browser_engine_system_auth_no_realm_message).let {
+            it.substring(it.length - 10)
+        }
+        assertTrue((request as PromptRequest.Authentication).message.endsWith(noRealmMessageTail))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.N])
+    @Suppress("Deprecation")
+    fun `onReceivedHttpAuthRequest takes credentials from WebView`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = SystemEngineSession(context)
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+
+        engineSession.webView = spy(engineSession.webView)
+        engineView.render(engineSession)
+
+        // use captor as getWebViewClient() is available only from Oreo
+        // and this test runs on N to not use WebViewDatabase
+        val captor = argumentCaptor<WebViewClient>()
+        verify(engineSession.webView).webViewClient = captor.capture()
+        val webViewClient = captor.value
+
+        val host = "mozilla.org"
+        val realm = "realm"
+        val userName = "user123"
+        val password = "pass@123"
+
+        val validCredentials = arrayOf(userName, password)
+        `when`(engineSession.webView.getHttpAuthUsernamePassword(host, realm)).thenReturn(validCredentials)
+        webViewClient.onReceivedHttpAuthRequest(engineSession.webView, mock(), host, realm)
+        assertEquals((request as PromptRequest.Authentication).userName, userName)
+        assertEquals((request as PromptRequest.Authentication).password, password)
+
+        val nullCredentials = null
+        `when`(engineSession.webView.getHttpAuthUsernamePassword(host, realm)).thenReturn(nullCredentials)
+        webViewClient.onReceivedHttpAuthRequest(engineSession.webView, mock(), host, realm)
+        assertEquals((request as PromptRequest.Authentication).userName, "")
+        assertEquals((request as PromptRequest.Authentication).password, "")
+
+        val credentialsWithNulls = arrayOf<String?>(null, null)
+        `when`(engineSession.webView.getHttpAuthUsernamePassword(host, realm)).thenReturn(credentialsWithNulls)
+        webViewClient.onReceivedHttpAuthRequest(engineSession.webView, mock(), host, realm)
+        assertEquals((request as PromptRequest.Authentication).userName, "")
+        assertEquals((request as PromptRequest.Authentication).password, "")
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.O])
+    fun `onReceivedHttpAuthRequest uses WebViewDatabase on Oreo+`() {
+        val context = getApplicationContext<Context>()
+        val engineSession = spy(SystemEngineSession(context))
+        val engineView = SystemEngineView(context)
+        var request: PromptRequest? = null
+
+        engineSession.register(object : EngineSession.Observer {
+            override fun onPromptRequest(promptRequest: PromptRequest) {
+                request = promptRequest
+            }
+        })
+        engineView.render(engineSession)
+
+        val host = "mozilla.org"
+        val realm = "realm"
+        val userName = "userFromDB"
+        val password = "pass@123FromDB"
+        val webViewDatabase = mock(WebViewDatabase::class.java)
+        `when`(webViewDatabase.getHttpAuthUsernamePassword(host, realm)).thenReturn(arrayOf(userName, password))
+        `when`(engineSession.webViewDatabase(context)).thenReturn(webViewDatabase)
+
+        engineSession.webView.webViewClient.onReceivedHttpAuthRequest(engineSession.webView, mock(), host, realm)
+
+        val authRequest = request as PromptRequest.Authentication
+        assertEquals(authRequest.userName, userName)
+        assertEquals(authRequest.password, password)
     }
 
     private fun Date.add(timeUnit: Int, amountOfTime: Int): Date {

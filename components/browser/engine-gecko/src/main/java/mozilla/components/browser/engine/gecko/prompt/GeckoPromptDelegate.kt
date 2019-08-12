@@ -6,10 +6,9 @@ package mozilla.components.browser.engine.gecko.prompt
 
 import android.content.Context
 import android.net.Uri
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import mozilla.components.browser.engine.gecko.GeckoEngineSession
 import mozilla.components.concept.engine.prompt.Choice
-import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.prompt.PromptRequest.TimeSelection
 import mozilla.components.concept.engine.prompt.PromptRequest.Alert
 import mozilla.components.concept.engine.prompt.PromptRequest.MenuChoice
@@ -31,6 +30,7 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.TextCallback
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.support.ktx.kotlin.toDate
 import mozilla.components.concept.engine.prompt.PromptRequest.Authentication.Level
 import mozilla.components.concept.engine.prompt.PromptRequest.Authentication.Method
@@ -41,6 +41,9 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_FLAG_P
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_NONE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_PW_ENCRYPTED
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.AuthOptions.AUTH_LEVEL_SECURE
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEGATIVE
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_NEUTRAL
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.BUTTON_TYPE_POSITIVE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_DATETIME_LOCAL
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_MONTH
@@ -58,53 +61,36 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
     GeckoSession.PromptDelegate {
 
     override fun onChoicePrompt(
-        session: GeckoSession?,
+        session: GeckoSession,
         title: String?,
         msg: String?,
         type: Int,
         geckoChoices: Array<out GeckoChoice>,
         callback: ChoiceCallback
     ) {
+        val choices = convertToChoices(geckoChoices)
+        val onConfirmSingleChoice: (Choice) -> Unit = { selectedChoice ->
+            callback.confirm(selectedChoice.id)
+        }
+        val onConfirmMultipleSelection: (Array<Choice>) -> Unit = { selectedChoices ->
+            val ids = selectedChoices.toIdsArray()
+            callback.confirm(ids)
+        }
 
-        val pair = convertToChoices(geckoChoices)
-        // An array of all the GeckoChoices transformed as local Choices object.
-        val choices = pair.first
-        // A map that contains all local choices and map to GeckoChoices
-        val mapChoicesToGeckoChoices = pair.second
+        val promptRequest = when (type) {
+            CHOICE_TYPE_SINGLE -> SingleChoice(choices, onConfirmSingleChoice)
+            CHOICE_TYPE_MENU -> MenuChoice(choices, onConfirmSingleChoice)
+            CHOICE_TYPE_MULTIPLE -> MultipleChoice(choices, onConfirmMultipleSelection)
+            else -> throw InvalidParameterException("$type is not a valid Gecko @Choice.ChoiceType")
+        }
 
-        when (type) {
-
-            CHOICE_TYPE_SINGLE -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(SingleChoice(choices) { selectedChoice ->
-                        val geckoChoice = mapChoicesToGeckoChoices[selectedChoice]
-                        callback.confirm(geckoChoice)
-                    })
-                }
-            }
-
-            CHOICE_TYPE_MENU -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(MenuChoice(choices) { selectedChoice ->
-                        val geckoChoice = mapChoicesToGeckoChoices[selectedChoice]
-                        callback.confirm(geckoChoice)
-                    })
-                }
-            }
-
-            CHOICE_TYPE_MULTIPLE -> {
-                geckoEngineSession.notifyObservers {
-                    onPromptRequest(MultipleChoice(choices) { choices ->
-                        val ids = choices.toIdsArray()
-                        callback.confirm(ids)
-                    })
-                }
-            }
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(promptRequest)
         }
     }
 
     override fun onAlert(
-        session: GeckoSession?,
+        session: GeckoSession,
         title: String?,
         message: String?,
         callback: AlertCallback
@@ -124,10 +110,10 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
     }
 
     override fun onFilePrompt(
-        session: GeckoSession?,
+        session: GeckoSession,
         title: String?,
         selectionType: Int,
-        mimeTypes: Array<out String>,
+        mimeTypes: Array<out String>?,
         callback: FileCallback
     ) {
 
@@ -148,7 +134,7 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
         geckoEngineSession.notifyObservers {
             onPromptRequest(
                 PromptRequest.File(
-                    mimeTypes,
+                    mimeTypes ?: emptyArray(),
                     isMultipleFilesSelection,
                     onSelectSingle,
                     onSelectMultiple,
@@ -159,7 +145,7 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
     }
 
     override fun onDateTimePrompt(
-        session: GeckoSession?,
+        session: GeckoSession,
         title: String?,
         type: Int,
         value: String?,
@@ -191,26 +177,6 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
             format,
             geckoCallback
         )
-    }
-
-    override fun onColorPrompt(
-        session: GeckoSession,
-        title: String?,
-        defaultColor: String?,
-        callback: TextCallback
-    ) {
-
-        val onConfirm: (String) -> Unit = {
-            callback.confirm(it)
-        }
-        val onDismiss: () -> Unit = {
-            callback.dismiss()
-        }
-        geckoEngineSession.notifyObservers {
-            onPromptRequest(
-                PromptRequest.Color(defaultColor ?: "", onConfirm, onDismiss)
-            )
-        }
     }
 
     override fun onAuthPrompt(
@@ -290,17 +256,87 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
         }
     }
 
-    override fun onButtonPrompt(
-        session: GeckoSession?,
+    override fun onColorPrompt(
+        session: GeckoSession,
         title: String?,
-        msg: String?,
-        btnMsg: Array<out String>?,
-        callback: ButtonCallback?
-    ) = Unit
+        defaultColor: String?,
+        callback: TextCallback
+    ) {
 
-    override fun onPopupRequest(session: GeckoSession?, targetUri: String?): GeckoResult<AllowOrDeny> {
-        return GeckoResult()
-    } // Related issue: https://github.com/mozilla-mobile/android-components/issues/1473
+        val onConfirm: (String) -> Unit = {
+            callback.confirm(it)
+        }
+        val onDismiss: () -> Unit = {
+            callback.dismiss()
+        }
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(
+                PromptRequest.Color(defaultColor ?: "", onConfirm, onDismiss)
+            )
+        }
+    }
+
+    override fun onPopupRequest(session: GeckoSession, targetUri: String?): GeckoResult<AllowOrDeny> {
+        val geckoResult = GeckoResult<AllowOrDeny>()
+        val onAllow: () -> Unit = { geckoResult.complete(AllowOrDeny.ALLOW) }
+        val onDeny: () -> Unit = { geckoResult.complete(AllowOrDeny.DENY) }
+
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(
+                PromptRequest.Popup(targetUri ?: "", onAllow, onDeny)
+            )
+        }
+        return geckoResult
+    }
+
+    override fun onButtonPrompt(
+        session: GeckoSession,
+        title: String?,
+        message: String?,
+        buttonTitles: Array<out String?>?,
+        callback: ButtonCallback
+    ) {
+        val hasShownManyDialogs = callback.hasCheckbox()
+        val positiveButtonTitle = buttonTitles?.get(BUTTON_TYPE_POSITIVE) ?: ""
+        val negativeButtonTitle = buttonTitles?.get(BUTTON_TYPE_NEGATIVE) ?: ""
+        val neutralButtonTitle = buttonTitles?.get(BUTTON_TYPE_NEUTRAL) ?: ""
+
+        val onConfirmPositiveButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_POSITIVE)
+        }
+
+        val onConfirmNegativeButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_NEGATIVE)
+        }
+
+        val onConfirmNeutralButton: (Boolean) -> Unit = { showMoreDialogs ->
+            callback.checkboxValue = showMoreDialogs
+            callback.confirm(BUTTON_TYPE_NEUTRAL)
+        }
+
+        val onDismiss: () -> Unit = {
+            callback.dismiss()
+        }
+
+        geckoEngineSession.notifyObservers {
+            onPromptRequest(
+                PromptRequest.Confirm(
+                    title ?: "",
+                    message ?: "",
+                    hasShownManyDialogs,
+                    positiveButtonTitle,
+                    negativeButtonTitle,
+                    neutralButtonTitle,
+                    onConfirmPositiveButton,
+                    onConfirmNegativeButton,
+                    onConfirmNeutralButton,
+                    onDismiss
+                )
+            )
+        }
+    }
 
     private fun GeckoChoice.toChoice(): Choice {
         val choiceChildren = items?.map { it.toChoice() }?.toTypedArray()
@@ -308,25 +344,17 @@ internal class GeckoPromptDelegate(private val geckoEngineSession: GeckoEngineSe
     }
 
     /**
-     * Convert an array of [GeckoChoice] to [Choice].
-     *
-     * @property geckoChoices The ID of the option or group.
-     * @return A [Pair] with all the [GeckoChoice] converted to [Choice]
-     * and a map where you find is [GeckoChoice] representation .
+     * Convert an array of [GeckoChoice] to Choice array.
+     * @return array of Choice
      */
     private fun convertToChoices(
         geckoChoices: Array<out GeckoChoice>
-    ): Pair<Array<Choice>, HashMap<Choice, GeckoChoice>> {
+    ): Array<Choice> {
 
-        val mapChoicesToGeckoChoices = HashMap<Choice, GeckoChoice>()
-
-        val arrayOfChoices = geckoChoices.map { geckoChoice ->
+        return geckoChoices.map { geckoChoice ->
             val choice = geckoChoice.toChoice()
-            mapChoicesToGeckoChoices[choice] = geckoChoice
             choice
         }.toTypedArray()
-
-        return Pair(arrayOfChoices, mapChoicesToGeckoChoices)
     }
 
     @Suppress("LongParameterList")

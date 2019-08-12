@@ -6,15 +6,16 @@ package mozilla.components.service.glean.storages
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
-import mozilla.components.service.glean.CommonMetricData
+import mozilla.components.service.glean.error.ErrorRecording.ErrorType
+import mozilla.components.service.glean.error.ErrorRecording.recordError
+import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.org.json.toList
 import org.json.JSONArray
 
 /**
  * This singleton handles the in-memory storage logic for string lists. It is meant to be used by
- * the Specific String List API and the ping assembling objects. No validation on the stored data
- * is performed at this point: validation must be performed by the Specific String List API.
+ * the Specific String List API and the ping assembling objects.
  *
  * This class contains a reference to the Android application Context. While the IDE warns
  * us that this could leak, the application context lives as long as the application and this
@@ -25,11 +26,12 @@ internal object StringListsStorageEngine : StringListsStorageEngineImplementatio
 
 internal open class StringListsStorageEngineImplementation(
     override val logger: Logger = Logger("glean/StringsListsStorageEngine")
-) : GenericScalarStorageEngine<List<String>>() {
-
+) : GenericStorageEngine<List<String>>() {
     companion object {
         // Maximum length of any list
         const val MAX_LIST_LENGTH_VALUE = 20
+        // Maximum length of any string in the list
+        const val MAX_STRING_LENGTH = 50
     }
 
     override fun deserializeSingleMetric(metricName: String, value: Any?): List<String>? {
@@ -72,18 +74,33 @@ internal open class StringListsStorageEngineImplementation(
      * @param metricData object with metric settings
      * @param value the string list value to add
      */
-    @Synchronized
     fun add(
         metricData: CommonMetricData,
         value: String
     ) {
+        val truncatedValue = value.let {
+            if (it.length > MAX_STRING_LENGTH) {
+                recordError(
+                    metricData,
+                    ErrorType.InvalidValue,
+                    "Individual value length ${it.length} exceeds maximum of $MAX_STRING_LENGTH",
+                    logger
+                )
+                return@let it.substring(0, MAX_STRING_LENGTH)
+            }
+            it
+        }
+
         // Use a custom combiner to add the string to the existing list rather than overwriting
-        super.recordScalar(metricData, listOf(value), null) { currentValue, newValue ->
+        super.recordMetric(metricData, listOf(truncatedValue), null) { currentValue, newValue ->
             currentValue?.let {
-                if (it.count() + value.count() > MAX_LIST_LENGTH_VALUE) {
-                    logger.warn("${metricData.category}.${metricData.name} - " +
-                                "discarding extra values. List limit $MAX_LIST_LENGTH_VALUE " +
-                                "reached.")
+                if (it.count() + 1 > MAX_LIST_LENGTH_VALUE) {
+                    recordError(
+                        metricData,
+                        ErrorType.InvalidValue,
+                        "String list length of ${it.count() + 1} exceeds maximum of $MAX_LIST_LENGTH_VALUE",
+                        logger
+                    )
                 }
 
                 it + newValue.take(MAX_LIST_LENGTH_VALUE - it.count())
@@ -99,16 +116,31 @@ internal open class StringListsStorageEngineImplementation(
      * @param metricData object with metric settings
      * @param value the string list value to record
      */
-    @Synchronized
     fun set(
         metricData: CommonMetricData,
         value: List<String>
     ) {
-        if (value.count() > MAX_LIST_LENGTH_VALUE) {
-            logger.warn("${metricData.category}.${metricData.name} - " +
-                        "discarding extra values. List limit reached")
+        val stringList = value.map {
+            if (it.length > MAX_STRING_LENGTH) {
+                recordError(
+                    metricData,
+                    ErrorType.InvalidValue,
+                    "String too long ${it.length} > $MAX_STRING_LENGTH",
+                    logger
+                )
+            }
+            it.take(MAX_STRING_LENGTH)
         }
 
-        super.recordScalar(metricData, value.take(MAX_LIST_LENGTH_VALUE))
+        if (stringList.count() > MAX_LIST_LENGTH_VALUE) {
+            recordError(
+                metricData,
+                ErrorType.InvalidValue,
+                "String list length of ${value.count()} exceeds maximum of $MAX_LIST_LENGTH_VALUE",
+                logger
+            )
+        }
+
+        super.recordMetric(metricData, stringList.take(MAX_LIST_LENGTH_VALUE))
     }
 }

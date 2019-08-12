@@ -12,11 +12,12 @@ import android.net.http.SslError
 import android.os.Build
 import android.os.Handler
 import android.os.Message
-import android.support.annotation.VisibleForTesting
 import android.util.AttributeSet
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.DownloadListener
+import android.webkit.HttpAuthHandler
+import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
@@ -35,6 +36,8 @@ import android.webkit.WebView.HitTestResult.SRC_ANCHOR_TYPE
 import android.webkit.WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting.PRIVATE
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.engine.system.matcher.UrlMatcher
 import mozilla.components.browser.engine.system.permission.SystemPermissionRequest
@@ -46,7 +49,8 @@ import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.request.RequestInterceptor.InterceptionResponse
-import mozilla.components.support.ktx.android.content.isOSOnLowMemory
+import mozilla.components.concept.storage.VisitType
+import mozilla.components.support.ktx.kotlin.toUri
 import mozilla.components.support.utils.DownloadUtils
 import java.util.Date
 
@@ -59,8 +63,8 @@ class SystemEngineView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr), EngineView, View.OnLongClickListener {
-
-    private var session: SystemEngineSession? = null
+    @VisibleForTesting(otherwise = PRIVATE)
+    internal var session: SystemEngineSession? = null
     internal var jsAlertCount = 0
     internal var shouldShowMoreDialogs = true
     internal var lastDialogShownAt = Date()
@@ -78,7 +82,7 @@ class SystemEngineView @JvmOverloads constructor(
 
     override fun onLongClick(view: View?): Boolean {
         val result = session?.webView?.hitTestResult
-        return result?.let { handleLongClick(result.type, result.extra) } ?: false
+        return result?.let { handleLongClick(result.type, result.extra ?: "") } ?: false
     }
 
     override fun onPause() {
@@ -97,11 +101,23 @@ class SystemEngineView @JvmOverloads constructor(
 
     override fun onDestroy() {
         session?.apply {
-            webView.destroy()
+            // The WebView instance is long-lived, as it's referenced in the
+            // engine session. We can't destroy it here since the session
+            // might be used with a different engine view instance later.
+
+            // Further, when this engine view gets destroyed, we need to
+            // remove/detach the WebView so that engine view's activity context
+            // can properly be destroyed and gc'ed. The WebView instances are
+            // created with the context provided to the engine (application
+            // context) and reference their parent (this engine view). Since
+            // we're keeping the engine session (and their WebView) instances
+            // in the SessionManager until closed we'd otherwise prevent
+            // this engine view and its context from getting gc'ed.
+            (webView.parent as? SystemEngineView)?.removeView(webView)
         }
     }
 
-    internal fun initWebView(webView: WebView = NestedWebView(context)): WebView {
+    internal fun initWebView(webView: WebView): WebView {
         webView.tag = "mozac_system_engine_webview"
         webView.webViewClient = createWebViewClient()
         webView.webChromeClient = createWebChromeClient()
@@ -115,8 +131,20 @@ class SystemEngineView @JvmOverloads constructor(
         override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
             // TODO private browsing not supported for SystemEngine
             // https://github.com/mozilla-mobile/android-components/issues/649
+            // Check if the delegate wants this type of url.
+            val delegate = session?.settings?.historyTrackingDelegate ?: return
+
+            if (!delegate.shouldStoreUri(url)) {
+                return
+            }
+
+            val visitType = when (isReload) {
+                true -> VisitType.RELOAD
+                false -> VisitType.LINK
+            }
+
             runBlocking {
-                session?.settings?.historyTrackingDelegate?.onVisited(url, isReload)
+                session?.settings?.historyTrackingDelegate?.onVisited(url, visitType)
             }
         }
 
@@ -142,13 +170,6 @@ class SystemEngineView @JvmOverloads constructor(
                             secure = cert != null,
                             host = cert?.let { Uri.parse(url).host },
                             issuer = cert?.issuedBy?.oName)
-
-                    if (!isLowOnMemory()) {
-                        val thumbnail = session?.captureThumbnail()
-                        if (thumbnail != null) {
-                            onThumbnailChange(thumbnail)
-                        }
-                    }
                 }
             }
         }
@@ -204,6 +225,10 @@ class SystemEngineView @JvmOverloads constructor(
                 }
             }
 
+            if (request.isForMainFrame) {
+                session?.let { it.notifyObservers { onLoadRequest(request.hasGesture()) } }
+            }
+
             return super.shouldInterceptRequest(view, request)
         }
 
@@ -249,12 +274,47 @@ class SystemEngineView @JvmOverloads constructor(
                 }
             }
         }
+
+        override fun onReceivedHttpAuthRequest(view: WebView, handler: HttpAuthHandler, host: String, realm: String) {
+            val session = session ?: return handler.cancel()
+
+            val formattedUrl = session.currentUrl.toUri().let { uri ->
+                (uri.scheme ?: "http") + "://" + (uri.host ?: host)
+            }
+
+            // Trim obnoxiously long realms.
+            val trimmedRealm = if (realm.length > MAX_REALM_LENGTH) {
+                realm.substring(0, MAX_REALM_LENGTH) + "\u2026"
+            } else {
+                realm
+            }
+
+            val message = if (trimmedRealm.isEmpty()) {
+                context.getString(R.string.mozac_browser_engine_system_auth_no_realm_message, formattedUrl)
+            } else {
+                context.getString(R.string.mozac_browser_engine_system_auth_message, trimmedRealm, formattedUrl)
+            }
+
+            val credentials = view.getAuthCredentials(host, realm)
+            val userName = credentials.first
+            val password = credentials.second
+
+            session.notifyObservers {
+                onPromptRequest(
+                    PromptRequest.Authentication(
+                        "",
+                        message,
+                        userName,
+                        password,
+                        PromptRequest.Authentication.Method.HOST,
+                        PromptRequest.Authentication.Level.NONE,
+                        onConfirm = { user, pass -> handler.proceed(user, pass) },
+                        onDismiss = { handler.cancel() }
+                    )
+                )
+            }
+        }
     }
-
-    @VisibleForTesting
-    internal var testLowMemory = false
-
-    private fun isLowOnMemory() = testLowMemory || (context?.isOSOnLowMemory() == true)
 
     @Suppress("ComplexMethod")
     private fun createWebChromeClient() = object : WebChromeClient() {
@@ -308,7 +368,7 @@ class SystemEngineView @JvmOverloads constructor(
         }
 
         override fun onJsAlert(view: WebView, url: String?, message: String?, result: JsResult): Boolean {
-            val session = session ?: return super.onJsAlert(view, url, message, result)
+            val session = session ?: return applyDefaultJsDialogBehavior(result)
 
             // When an alert is triggered from a iframe, url is equals to about:blank, using currentUrl as a fallback.
             val safeUrl = if (url.isNullOrBlank()) {
@@ -341,6 +401,90 @@ class SystemEngineView @JvmOverloads constructor(
                 result.cancel()
             }
 
+            updateJSDialogAbusedState()
+            return true
+        }
+
+        override fun onJsPrompt(
+            view: WebView?,
+            url: String?,
+            message: String?,
+            defaultValue: String?,
+            result: JsPromptResult
+        ): Boolean {
+            val session = session ?: return applyDefaultJsDialogBehavior(result)
+
+            val title = context.getString(R.string.mozac_browser_engine_system_alert_title, url ?: session.currentUrl)
+
+            val onDismiss: () -> Unit = {
+                result.cancel()
+            }
+
+            val onConfirm: (Boolean, String) -> Unit = { shouldNotShowMoreDialogs, valueInput ->
+                shouldShowMoreDialogs = !shouldNotShowMoreDialogs
+                result.confirm(valueInput)
+            }
+
+            if (shouldShowMoreDialogs) {
+                session.notifyObservers {
+                    onPromptRequest(
+                        PromptRequest.TextPrompt(
+                            title ?: "",
+                            message ?: "",
+                            defaultValue ?: "",
+                            areDialogsBeingAbused(),
+                            onDismiss,
+                            onConfirm
+                        )
+                    )
+                }
+            } else {
+                result.cancel()
+            }
+            updateJSDialogAbusedState()
+            return true
+        }
+
+        override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult): Boolean {
+            val session = session ?: return applyDefaultJsDialogBehavior(result)
+            val title = context.getString(R.string.mozac_browser_engine_system_alert_title, url ?: session.currentUrl)
+            val positiveButton = context.getString(android.R.string.ok)
+            val negativeButton = context.getString(android.R.string.cancel)
+
+            val onDismiss: () -> Unit = {
+                result.cancel()
+            }
+
+            val onConfirmPositiveButton: (Boolean) -> Unit = { shouldNotShowMoreDialogs ->
+                shouldShowMoreDialogs = !shouldNotShowMoreDialogs
+                result.confirm()
+            }
+
+            val onConfirmNegativeButton: (Boolean) -> Unit = { shouldNotShowMoreDialogs ->
+                shouldShowMoreDialogs = !shouldNotShowMoreDialogs
+                result.cancel()
+            }
+
+            if (shouldShowMoreDialogs) {
+                session.notifyObservers {
+                    onPromptRequest(
+                        PromptRequest.Confirm(
+                            title,
+                            message ?: "",
+                            areDialogsBeingAbused(),
+                            positiveButton,
+                            negativeButton,
+                            "",
+                            onConfirmPositiveButton,
+                            onConfirmNegativeButton,
+                            {},
+                            onDismiss
+                        )
+                    )
+                }
+            } else {
+                result.cancel()
+            }
             updateJSDialogAbusedState()
             return true
         }
@@ -492,11 +636,36 @@ class SystemEngineView @JvmOverloads constructor(
         }
     }
 
+    override fun setVerticalClipping(clippingHeight: Int) {
+        // no-op
+    }
+
     override fun canScrollVerticallyDown() = session?.webView?.canScrollVertically(1) ?: false
+
+    @Suppress("Deprecation")
+    // TODO remove suppression when fixed: https://github.com/mozilla-mobile/android-components/issues/888
+    override fun captureThumbnail(onFinish: (Bitmap?) -> Unit) {
+        val webView = session?.webView
+
+        val thumbnail = if (webView == null) {
+            null
+        } else {
+            webView.buildDrawingCache()
+            val outBitmap = webView.drawingCache?.let { cache -> Bitmap.createBitmap(cache) }
+            webView.destroyDrawingCache()
+            outBitmap
+        }
+        onFinish(thumbnail)
+    }
 
     private fun resetJSAlertAbuseState() {
         jsAlertCount = 0
         shouldShowMoreDialogs = true
+    }
+
+    private fun applyDefaultJsDialogBehavior(result: JsResult?): Boolean {
+        result?.cancel()
+        return true
     }
 
     internal fun updateJSDialogAbusedState() {
@@ -526,6 +695,26 @@ class SystemEngineView @JvmOverloads constructor(
         return jsAlertCount > MAX_SUCCESSIVE_DIALOG_COUNT
     }
 
+    @Suppress("Deprecation")
+    private fun WebView.getAuthCredentials(host: String, realm: String): Pair<String, String> {
+        val credentials = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            session?.webViewDatabase(context)?.getHttpAuthUsernamePassword(host, realm)
+        } else {
+            this.getHttpAuthUsernamePassword(host, realm)
+        }
+
+        var credentialsPair = "" to ""
+
+        if (!credentials.isNullOrEmpty() && credentials.size == 2) {
+
+            val user = credentials[0] ?: ""
+            val pass = credentials[1] ?: ""
+
+            credentialsPair = user to pass
+        }
+        return credentialsPair
+    }
+
     companion object {
 
         // Maximum number of successive dialogs before we prompt users to disable dialogs.
@@ -533,6 +722,9 @@ class SystemEngineView @JvmOverloads constructor(
 
         // Minimum time required between dialogs in seconds before enabling the stop dialog.
         internal const val MAX_SUCCESSIVE_DIALOG_SECONDS_LIMIT: Int = 3
+
+        // Maximum realm length to be shown in authentication dialog.
+        internal const val MAX_REALM_LENGTH: Int = 50
 
         @Volatile
         internal var URL_MATCHER: UrlMatcher? = null

@@ -16,6 +16,9 @@ class GeckoEngineSessionState internal constructor(
 ) : EngineSessionState {
     override fun toJSON() = JSONObject().apply {
         if (actualState != null) {
+            // GeckoView provides a String representing the entire session state. We
+            // store this String using a single Map entry with key GECKO_STATE_KEY.
+
             put(GECKO_STATE_KEY, actualState.toString())
         }
     }
@@ -23,7 +26,10 @@ class GeckoEngineSessionState internal constructor(
     companion object {
         fun fromJSON(json: JSONObject): GeckoEngineSessionState = try {
             val state = json.getString(GECKO_STATE_KEY)
-            GeckoEngineSessionState(GeckoSession.SessionState(state))
+
+            GeckoEngineSessionState(
+                GeckoSession.SessionState.fromString(state)
+            )
         } catch (e: JSONException) {
             GeckoEngineSessionState(null)
         }

@@ -4,18 +4,26 @@
 
 package mozilla.components.feature.session.bundling
 
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.Transformations
-import android.arch.paging.DataSource
 import android.content.Context
-import android.support.annotation.CheckResult
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.CheckResult
+import androidx.annotation.VisibleForTesting
+import androidx.annotation.WorkerThread
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.Transformations
+import androidx.paging.DataSource
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
+import mozilla.components.browser.session.ext.writeSnapshot
 import mozilla.components.browser.session.storage.AutoSave
+import mozilla.components.concept.engine.Engine
+import mozilla.components.feature.session.bundling.adapter.SessionBundleAdapter
 import mozilla.components.feature.session.bundling.db.BundleDatabase
 import mozilla.components.feature.session.bundling.db.BundleEntity
 import mozilla.components.feature.session.bundling.ext.toBundleEntity
+import mozilla.components.support.ktx.java.io.truncateDirectory
+import java.io.File
+import java.lang.IllegalArgumentException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,9 +32,12 @@ import java.util.concurrent.TimeUnit
  * @param bundleLifetime The lifetime of a bundle controls whether a bundle will be restored or whether this bundle is
  * considered expired and a new bundle will be used.
  */
+@Suppress("TooManyFunctions")
+@Deprecated("This component is getting removed. See feature-tab-collections for an alternative.")
 class SessionBundleStorage(
-    context: Context,
-    private val bundleLifetime: Pair<Long, TimeUnit>
+    private val context: Context,
+    private val engine: Engine,
+    internal val bundleLifetime: Pair<Long, TimeUnit>
 ) : AutoSave.Storage {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal var databaseInitializer = {
@@ -40,13 +51,16 @@ class SessionBundleStorage(
      * Restores the last [SessionBundle] if there is one without expired lifetime.
      */
     @Synchronized
+    @WorkerThread
     fun restore(): SessionBundle? {
         val since = now() - bundleLifetime.second.toMillis(bundleLifetime.first)
 
-        return database
+        val entity = database
             .bundleDao()
             .getLastBundle(since)
             .also { lastBundle = it }
+
+        return entity?.let { SessionBundleAdapter(context, engine, it) }
     }
 
     /**
@@ -54,15 +68,14 @@ class SessionBundleStorage(
      * updated with the data from the snapshot. If no bundle was restored a new bundle will be created.
      */
     @Synchronized
+    @WorkerThread
     override fun save(snapshot: SessionManager.Snapshot): Boolean {
-        var bundle = lastBundle
+        val bundle = lastBundle
 
         if (bundle == null) {
-            bundle = snapshot.toBundleEntity().also { lastBundle = it }
-            bundle.id = database.bundleDao().insertBundle(bundle)
+            saveNewBundle(snapshot)
         } else {
-            bundle.updateFrom(snapshot)
-            database.bundleDao().updateBundle(bundle)
+            updateExistingBundle(bundle, snapshot)
         }
 
         return true
@@ -73,22 +86,32 @@ class SessionBundleStorage(
      * next time a [SessionManager.Snapshot] is saved.
      */
     @Synchronized
+    @WorkerThread
     fun remove(bundle: SessionBundle) {
-        if (bundle == lastBundle) {
+        if (bundle !is SessionBundleAdapter) {
+            throw IllegalArgumentException("Unexpected bundle type")
+        }
+
+        if (bundle.actual == lastBundle) {
             lastBundle = null
         }
 
-        val entity = bundle as? BundleEntity
-        entity?.let { database.bundleDao().deleteBundle(it) }
+        bundle.actual.let { database.bundleDao().deleteBundle(it) }
+
+        bundle.actual.stateFile(context, engine).delete()
     }
 
     /**
      * Removes all saved [SessionBundle] instances permanently.
      */
     @Synchronized
+    @WorkerThread
     fun removeAll() {
         lastBundle = null
         database.clearAllTables()
+
+        getStateDirectory(context)
+            .truncateDirectory()
     }
 
     /**
@@ -97,7 +120,7 @@ class SessionBundleStorage(
      */
     @Synchronized
     fun current(): SessionBundle? {
-        return lastBundle
+        return lastBundle?.let { SessionBundleAdapter(context, engine, it) }
     }
 
     /**
@@ -105,19 +128,36 @@ class SessionBundleStorage(
      */
     @Synchronized
     fun use(bundle: SessionBundle) {
-        lastBundle = bundle as BundleEntity
+        if (bundle !is SessionBundleAdapter) {
+            throw IllegalArgumentException("Unexpected bundle type")
+        }
+
+        lastBundle = bundle.actual
+    }
+
+    /**
+     * Clear the currently used, active [SessionBundle] and use a new one the next time a [SessionManager.Snapshot] is
+     * saved.
+     */
+    @Synchronized
+    fun new() {
+        lastBundle = null
     }
 
     /**
      * Returns the last saved [SessionBundle] instances (up to [limit]) as a [LiveData] list.
+     *
+     * @param since (Optional) Unix timestamp (milliseconds). If set this method will only return [SessionBundle]
+     * instances that have been saved since the given timestamp.
+     * @param limit (Optional) Maximum number of [SessionBundle] instances that should be returned.
      */
-    fun bundles(limit: Int = 20): LiveData<List<SessionBundle>> {
+    fun bundles(since: Long = 0, limit: Int = 20): LiveData<List<SessionBundle>> {
         return Transformations.map(
             database
             .bundleDao()
-            .getBundles(limit)
+            .getBundles(since, limit)
         ) { list ->
-            list.map { it as SessionBundle }
+            list.map { SessionBundleAdapter(context, engine, it) }
         }
     }
 
@@ -129,12 +169,15 @@ class SessionBundleStorage(
      *
      * - https://developer.android.com/topic/libraries/architecture/paging/data
      * - https://developer.android.com/topic/libraries/architecture/paging/ui
+     *
+     * @param since (Optional) Unix timestamp (milliseconds). If set this method will only return [SessionBundle]
+     * instances that have been saved since the given timestamp.
      */
-    fun bundlesPaged(): DataSource.Factory<Int, SessionBundle> {
+    fun bundlesPaged(since: Long = 0): DataSource.Factory<Int, SessionBundle> {
         return database
             .bundleDao()
-            .getBundlesPaged()
-            .map { entity -> entity as SessionBundle }
+            .getBundlesPaged(since)
+            .map { entity -> SessionBundleAdapter(context, engine, entity) }
     }
 
     /**
@@ -149,6 +192,61 @@ class SessionBundleStorage(
         return AutoSave(sessionManager, this, unit.toMillis(interval))
     }
 
+    /**
+     * Automatically clears the current bundle and starts a new bundle if the lifetime has expired while the app was in
+     * the background.
+     */
+    @Synchronized
+    fun autoClose(
+        sessionManager: SessionManager
+    ) {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            SessionBundleLifecycleObserver(this, sessionManager))
+    }
+
+    /**
+     * Save the given [SessionManager.Snapshot] as a new bundle.
+     */
+    private fun saveNewBundle(snapshot: SessionManager.Snapshot) {
+        if (snapshot.isEmpty()) {
+            // There's no need to save a new empty bundle to the database. Let's wait until there are sessions
+            // in the snapshot.
+            return
+        }
+
+        val bundle = snapshot.toBundleEntity().also {
+            lastBundle = it
+        }
+
+        bundle.stateFile(context, engine).writeSnapshot(snapshot)
+
+        bundle.id = database.bundleDao().insertBundle(bundle)
+    }
+
+    /**
+     * Update the given bundle with the data from the [SessionManager.Snapshot].
+     */
+    private fun updateExistingBundle(bundle: BundleEntity, snapshot: SessionManager.Snapshot) {
+        if (snapshot.isEmpty()) {
+            // If this snapshot is empty then instead of saving an empty bundle: Remove the bundle. Otherwise
+            // we end up with empty bundles to restore and that is not helpful at all.
+            remove(SessionBundleAdapter(context, engine, bundle))
+        } else {
+            bundle.stateFile(context, engine).writeSnapshot(snapshot)
+
+            bundle.updateFrom(snapshot)
+            database.bundleDao().updateBundle(bundle)
+        }
+    }
+
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal fun now() = System.currentTimeMillis()
+
+    companion object {
+        internal fun getStateDirectory(context: Context): File {
+            return File(context.filesDir, "mozac.feature.session.bundling").apply {
+                mkdirs()
+            }
+        }
+    }
 }

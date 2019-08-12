@@ -10,6 +10,7 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.concept.engine.Settings
+import mozilla.components.concept.engine.media.Media
 import mozilla.components.concept.engine.permission.PermissionRequest
 
 import mozilla.components.concept.engine.prompt.PromptRequest
@@ -21,6 +22,8 @@ import mozilla.components.support.test.mock
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito.mock
@@ -51,8 +54,8 @@ class EngineObserverTest {
             override fun findNext(forward: Boolean) {}
             override fun clearFindMatches() {}
             override fun exitFullScreenMode() {}
-            override fun captureThumbnail(): Bitmap? = null
             override fun saveState(): EngineSessionState = mock()
+            override fun recoverFromCrash(): Boolean { return false }
 
             override fun loadData(data: String, mimeType: String, encoding: String) {
                 notifyObservers { onLocationChange(data) }
@@ -100,9 +103,9 @@ class EngineObserverTest {
             override fun findNext(forward: Boolean) {}
             override fun clearFindMatches() {}
             override fun exitFullScreenMode() {}
-            override fun captureThumbnail(): Bitmap? = null
             override fun saveState(): EngineSessionState = mock()
             override fun loadData(data: String, mimeType: String, encoding: String) {}
+            override fun recoverFromCrash(): Boolean { return false }
             override fun loadUrl(url: String) {
                 if (url.startsWith("https://")) {
                     notifyObservers { onSecurityChange(true, "host", "issuer") }
@@ -140,7 +143,6 @@ class EngineObserverTest {
             }
 
             override fun toggleDesktopMode(enable: Boolean, reload: Boolean) {}
-            override fun captureThumbnail(): Bitmap? = null
             override fun saveState(): EngineSessionState = mock()
             override fun loadUrl(url: String) {}
             override fun loadData(data: String, mimeType: String, encoding: String) {}
@@ -149,6 +151,7 @@ class EngineObserverTest {
             override fun findNext(forward: Boolean) {}
             override fun clearFindMatches() {}
             override fun exitFullScreenMode() {}
+            override fun recoverFromCrash(): Boolean { return false }
         }
         val observer = EngineObserver(session)
         engineSession.register(observer)
@@ -179,6 +182,21 @@ class EngineObserverTest {
         observer.onLocationChange("https://getpocket.com")
 
         assertEquals("", session.title)
+    }
+
+    @Test
+    fun `EngineObserver does not clear title if the URL did not change`() {
+        val session = Session("https://www.mozilla.org")
+        session.title = "Hello World"
+
+        val observer = EngineObserver(session)
+        observer.onTitleChange("Mozilla")
+
+        assertEquals("Mozilla", session.title)
+
+        observer.onLocationChange("https://www.mozilla.org")
+
+        assertEquals("Mozilla", session.title)
     }
 
     @Test
@@ -322,5 +340,116 @@ class EngineObserverTest {
         assertTrue(session.closeWindowRequest.isConsumed())
         observer.onCloseWindowRequest(windowRequest)
         assertFalse(session.closeWindowRequest.isConsumed())
+    }
+
+    @Test
+    fun `onMediaAdded will add media to session`() {
+        val session = Session("https://www.mozilla.org")
+        val observer = EngineObserver(session)
+
+        val media1: Media = mock()
+        observer.onMediaAdded(media1)
+
+        assertEquals(listOf(media1), session.media)
+
+        val media2: Media = mock()
+        observer.onMediaAdded(media2)
+
+        assertEquals(listOf(media1, media2), session.media)
+
+        val media3: Media = mock()
+        observer.onMediaAdded(media3)
+
+        assertEquals(listOf(media1, media2, media3), session.media)
+    }
+
+    @Test
+    fun `onMediaRemoved will remove media from session`() {
+        val session = Session("https://www.mozilla.org")
+        val observer = EngineObserver(session)
+
+        val media1: Media = mock()
+        val media2: Media = mock()
+        val media3: Media = mock()
+
+        session.media = listOf(media1)
+        session.media = listOf(media1, media2)
+        session.media = listOf(media1, media2, media3)
+
+        observer.onMediaRemoved(media2)
+
+        assertEquals(listOf(media1, media3), session.media)
+
+        observer.onMediaRemoved(media1)
+
+        assertEquals(listOf(media3), session.media)
+
+        observer.onMediaRemoved(media3)
+
+        assertEquals(emptyList<Media>(), session.media)
+    }
+
+    @Test
+    fun `onCrashStateChanged will update session and notify observer`() {
+        val session = Session("https://www.mozilla.org")
+        assertFalse(session.crashed)
+
+        val observer = EngineObserver(session)
+
+        observer.onCrashStateChange(true)
+        assertTrue(session.crashed)
+
+        observer.onCrashStateChange(false)
+        assertFalse(session.crashed)
+
+        observer.onCrashStateChange(true)
+        assertTrue(session.crashed)
+    }
+
+    @Test
+    fun `onLocationChange clears icon`() {
+        val session = Session("https://www.mozilla.org")
+        session.icon = mock()
+
+        val observer = EngineObserver(session)
+
+        assertNotNull(session.icon)
+
+        observer.onLocationChange("https://www.firefox.com")
+
+        assertNull(session.icon)
+    }
+
+    @Test
+    fun `onLocationChange does not clear search terms`() {
+        val session = Session("https://www.mozilla.org")
+        session.searchTerms = "Mozilla Foundation"
+
+        val observer = EngineObserver(session)
+        observer.onLocationChange("https://www.mozilla.org/en-US/")
+
+        assertEquals("Mozilla Foundation", session.searchTerms)
+    }
+
+    @Test
+    fun `onLoadRequest clears search terms for requests triggered by user interaction`() {
+        val session = Session("https://www.mozilla.org")
+        session.searchTerms = "Mozilla Foundation"
+
+        val observer = EngineObserver(session)
+        observer.onLoadRequest(triggeredByUserInteraction = true)
+
+        assertEquals("", session.searchTerms)
+    }
+
+    @Test
+    fun `onLoadRequest does not clear search terms for requests not triggered by user interaction`() {
+        val session = Session("https://www.mozilla.org")
+        session.searchTerms = "Mozilla Foundation"
+
+        val observer = EngineObserver(session)
+        observer.onLoadRequest(triggeredByUserInteraction = false)
+
+        assertEquals("Mozilla Foundation", session.searchTerms)
     }
 }

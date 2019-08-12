@@ -1,11 +1,11 @@
 package mozilla.components.browser.session.storage
 
-import android.arch.lifecycle.Lifecycle
-import android.arch.lifecycle.LifecycleObserver
-import android.arch.lifecycle.OnLifecycleEvent
-import android.arch.lifecycle.ProcessLifecycleOwner
 import android.os.SystemClock
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -108,9 +108,7 @@ class AutoSave(
 
             try {
                 val snapshot = sessionManager.createSnapshot()
-                if (snapshot != null) {
-                    sessionStorage.save(snapshot)
-                }
+                sessionStorage.save(snapshot)
             } finally {
                 val took = now() - start
                 logger.debug("Saved state to disk [${took}ms]")
@@ -201,6 +199,11 @@ private class AutoSaveSessionChange(
 
     override fun onSessionRemoved(session: Session) {
         autoSave.logger.info("Save: Session removed")
+        autoSave.triggerSave()
+    }
+
+    override fun onAllSessionsRemoved() {
+        autoSave.logger.info("Save: All sessions removed")
         autoSave.triggerSave()
     }
 }

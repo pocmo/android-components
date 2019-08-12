@@ -9,7 +9,6 @@ import mozilla.components.concept.engine.permission.PermissionRequest
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION
-import org.mozilla.geckoview.GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_MEDIA
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.MediaSource
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.MediaSource.SOURCE_AUDIOCAPTURE
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.MediaSource.SOURCE_APPLICATION
@@ -53,7 +52,6 @@ sealed class GeckoPermissionRequest constructor(
     ) {
         companion object {
             val permissionsMap = mapOf(
-                PERMISSION_AUTOPLAY_MEDIA to Permission.ContentAutoplayMedia(),
                 PERMISSION_DESKTOP_NOTIFICATION to Permission.ContentNotification(),
                 PERMISSION_GEOLOCATION to Permission.ContentGeoLocation()
             )
@@ -63,6 +61,7 @@ sealed class GeckoPermissionRequest constructor(
     /**
      * Represents a gecko-based application permission request.
      *
+     * @property uri the URI of the content requesting the permissions.
      * @property nativePermissions the list of requested app permissions (will be
      * mapped to corresponding [Permission]s).
      * @property callback the callback to grant/reject the requested permissions.
@@ -108,6 +107,10 @@ sealed class GeckoPermissionRequest constructor(
             val videos = permissions.mapNotNull { permission -> videoSources.find { it.id == permission.id } }
             val audios = permissions.mapNotNull { permission -> audioSources.find { it.id == permission.id } }
             callback.grant(videos.firstOrNull(), audios.firstOrNull())
+        }
+
+        override fun containsVideoAndAudioSources(): Boolean {
+            return videoSources.isNotEmpty() && audioSources.isNotEmpty()
         }
 
         override fun reject() {

@@ -5,6 +5,7 @@
 package mozilla.components.service.glean.storages
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 
 /**
  * Base interface intended to be implemented by the different
@@ -24,6 +25,22 @@ internal interface StorageEngine {
      *         ancestor is [Object], so we need to return [Any].
      */
     fun getSnapshotAsJSON(storeName: String, clearStore: Boolean): Any?
+
+    /**
+     * Return all of the metric identifiers currently holding data for the given
+     * stores.
+     *
+     * @param stores The stores to look in.
+     * @return a sequence of identifiers (including labels, if any) found in
+     *     those stores.
+     */
+    fun getIdentifiersInStores(stores: List<String>): Sequence<String> = sequence {}
+
+    /**
+     * Clear all stored data in the storage engine
+     */
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    fun clearAllStores()
 
     /**
      * Indicate whether this storage engine is sent at the top level of the ping

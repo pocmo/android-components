@@ -7,6 +7,7 @@ package mozilla.components.feature.awesomebar.provider
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.session.Session
@@ -18,11 +19,12 @@ import mozilla.components.support.test.any
 import mozilla.components.support.test.eq
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
@@ -89,6 +91,21 @@ class ClipboardSuggestionProviderTest {
     }
 
     @Test
+    fun `provider return suggestion on input start`() {
+        clipboardManager.primaryClip = ClipData.newPlainText("Test label", "https://www.mozilla.org")
+
+        val provider = ClipboardSuggestionProvider(context, mock())
+        val suggestions = runBlocking { provider.onInputStarted() }
+
+        assertEquals(1, suggestions.size)
+
+        val suggestion = suggestions.firstOrNull()
+        assertNotNull(suggestion!!)
+
+        assertEquals("https://www.mozilla.org", suggestion.description)
+    }
+
+    @Test
     fun `provider should return no suggestions if clipboard doesn not contain a url`() {
         assertClipboardYieldsNothing("Hello World")
 
@@ -98,16 +115,35 @@ class ClipboardSuggestionProviderTest {
     }
 
     @Test
+    fun `provider should allow customization of title and icon on suggestion`() {
+        clipboardManager.primaryClip = ClipData.newPlainText("Test label", "http://mozilla.org")
+        val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+        val provider = ClipboardSuggestionProvider(context, mock(), title = "My test title", icon = bitmap)
+
+        val suggestion = runBlocking {
+            provider.onInputStarted()
+            val suggestions = provider.onInputChanged("Hello")
+
+            suggestions.firstOrNull()
+        }
+
+        runBlocking {
+            assertEquals(bitmap, suggestion?.icon?.invoke(2, 2))
+            assertEquals("My test title", suggestion?.title)
+        }
+    }
+
+    @Test
     fun `clicking suggestion loads url`() = runBlocking {
         clipboardManager.primaryClip = ClipData.newPlainText(
             "Label",
             "Hello Mozilla, https://www.mozilla.org")
 
-        val selectedEngineSession = Mockito.mock(EngineSession::class.java)
-        val selectedSession = Mockito.mock(Session::class.java)
+        val selectedEngineSession: EngineSession = mock()
+        val selectedSession: Session = mock()
         val sessionManager: SessionManager = mock()
-        Mockito.`when`(sessionManager.selectedSessionOrThrow).thenReturn(selectedSession)
-        Mockito.`when`(sessionManager.getOrCreateEngineSession()).thenReturn(selectedEngineSession)
+        `when`(sessionManager.selectedSession).thenReturn(selectedSession)
+        `when`(sessionManager.getOrCreateEngineSession(selectedSession)).thenReturn(selectedEngineSession)
 
         val useCase = spy(SessionUseCases(sessionManager).loadUrl)
 
@@ -125,6 +161,12 @@ class ClipboardSuggestionProviderTest {
         suggestion.onSuggestionClicked!!.invoke()
 
         verify(useCase).invoke(eq("https://www.mozilla.org"), any())
+    }
+
+    @Test
+    fun `Provider suggestion should not get cleared when text changes`() {
+        val provider = ClipboardSuggestionProvider(context, mock())
+        assertFalse(provider.shouldClearSuggestions)
     }
 
     private fun assertClipboardYieldsUrl(text: String, url: String) {
