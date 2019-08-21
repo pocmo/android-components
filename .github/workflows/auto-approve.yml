@@ -1,0 +1,15 @@
+on: pull_request
+name: Auto-Approve MickeyMoz PRs
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: filter
+      uses: actions/bin/filter@master
+      with:
+        args: MickeyMoz
+    - name: approve
+      uses: hmarr/auto-approve-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
