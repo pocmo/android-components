@@ -1,5 +1,6 @@
 workflow "Auto-Approve MickeyMoz PRs" {
   on = "pull_request"
+  resolves = ["approve"]
 }
 
 action "filter" {
@@ -9,4 +10,6 @@ action "filter" {
 
 action "approve" {
   uses = "hmarr/auto-approve-action@master"
+  needs = "filter"
+  secrets = ["GITHUB_TOKEN"]
 }
