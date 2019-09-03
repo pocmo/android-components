@@ -8,6 +8,7 @@ import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.content.blocking.Tracker
+import mozilla.components.support.base.observer.Consumable
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -669,6 +670,35 @@ class SessionManagerMigrationTest {
             assertFalse(tab.trackingProtection.enabled)
             assertEquals(0, tab.trackingProtection.blockedTrackers.size)
             assertEquals(0, tab.trackingProtection.loadedTrackers.size)
+        }
+    }
+
+    @Test
+    fun `Adding a download`() {
+        val store = BrowserStore()
+        val manager = SessionManager(engine = mock(), store = store)
+
+        val session = Session(id = "session", initialUrl = "https://www.mozilla.org")
+        manager.add(session)
+
+        assertNull(session.download.peek())
+        assertNull(store.state.findTab("session")!!.content.download)
+
+        val download: Download = mock()
+        session.download = Consumable.from(download)
+
+        assertEquals(download, session.download.peek())
+        store.state.findTab("session")!!.also { tab ->
+            assertNotNull(tab.content.download)
+
+            assertEquals(download.id, tab.content.download!!.id)
+            assertEquals(download.contentLength, tab.content.download!!.contentLength)
+            assertEquals(download.contentType, tab.content.download!!.contentType)
+            assertEquals(download.destinationDirectory, tab.content.download!!.destinationDirectory)
+            assertEquals(download.fileName, tab.content.download!!.fileName)
+            assertEquals(download.referrerUrl, tab.content.download!!.referrerUrl)
+            assertEquals(download.url, tab.content.download!!.url)
+            assertEquals(download.userAgent, tab.content.download!!.userAgent)
         }
     }
 }

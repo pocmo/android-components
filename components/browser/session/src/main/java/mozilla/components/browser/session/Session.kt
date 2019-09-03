@@ -9,7 +9,9 @@ import mozilla.components.browser.session.engine.EngineSessionHolder
 import mozilla.components.browser.session.engine.request.LoadRequestMetadata
 import mozilla.components.browser.session.engine.request.LoadRequestOption
 import mozilla.components.browser.session.ext.syncDispatch
+import mozilla.components.browser.session.ext.toDownloadState
 import mozilla.components.browser.session.ext.toSecurityInfoState
+import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.ContentAction.RemoveIconAction
 import mozilla.components.browser.state.action.ContentAction.RemoveThumbnailAction
 import mozilla.components.browser.state.action.ContentAction.UpdateIconAction
@@ -274,6 +276,20 @@ class Session(
      * Last download request if it wasn't consumed by at least one observer.
      */
     var download: Consumable<Download> by Delegates.vetoable(Consumable.empty()) { _, _, download ->
+        val actualDownload = download.peek()
+
+        if (actualDownload == null) {
+            store?.syncDispatch(ContentAction.ConsumeDownloadAction(id))
+        } else {
+            store?.syncDispatch(
+                ContentAction.UpdateDownloadAction(id, actualDownload.toDownloadState())
+            )
+
+            download.onConsume {
+                store?.syncDispatch(ContentAction.ConsumeDownloadAction(id))
+            }
+        }
+
         val consumers = wrapConsumers<Download> { onDownload(this@Session, it) }
         !download.consumeBy(consumers)
     }

@@ -12,8 +12,14 @@ package mozilla.components.support.base.observer
  */
 class Consumable<T> private constructor(
     internal var value: T?,
-    private val onConsume: (() -> Unit)? = null
+    onConsume: (() -> Unit)? = null
 ) {
+    private val listeners = mutableListOf<() -> Unit>().also { listeners ->
+        if (onConsume != null) {
+            listeners.add(onConsume)
+        }
+    }
+
     /**
      * Invokes the given lambda and marks the value as consumed if the lambda returns true.
      */
@@ -21,7 +27,9 @@ class Consumable<T> private constructor(
     fun consume(consumer: (value: T) -> Boolean): Boolean {
         return if (value?.let(consumer) == true) {
             value = null
-            onConsume?.invoke()
+            synchronized(listeners) {
+                listeners.forEach { it() }
+            }
             true
         } else {
             false
@@ -39,10 +47,23 @@ class Consumable<T> private constructor(
 
         return if (results.contains(true)) {
             this.value = null
-            onConsume?.invoke()
+            synchronized(listeners) {
+                listeners.forEach { it() }
+            }
             true
         } else {
             false
+        }
+    }
+
+    fun peek(): T? = value
+
+    /**
+     * TODO
+     */
+    fun onConsume(listener: () -> Unit) {
+        synchronized(listeners) {
+            listeners.add(listener)
         }
     }
 
