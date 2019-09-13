@@ -8,10 +8,10 @@ import GeckoVersions.release_version
 import groovy.util.Node
 import groovy.util.NodeList
 import groovy.util.XmlParser
-import org.gradle.api.Plugin
-import org.gradle.api.Project
 import java.io.File
 import java.lang.Exception
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 
 open class GVVersionVerifierPlugin : Plugin<Project> {
 

@@ -5,29 +5,29 @@
 package mozilla.components.feature.accounts
 
 import android.content.Context
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
+import mozilla.components.concept.engine.request.RequestInterceptor
+import mozilla.components.concept.sync.AuthFlowUrl
+import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
+import mozilla.components.service.fxa.DeviceConfig
+import mozilla.components.service.fxa.FxaAuthData
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.support.test.any
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.`when`
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import mozilla.components.concept.engine.request.RequestInterceptor
-import mozilla.components.concept.sync.AuthFlowUrl
-import mozilla.components.concept.sync.AuthType
-import mozilla.components.service.fxa.DeviceConfig
-import mozilla.components.service.fxa.FxaAuthData
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 

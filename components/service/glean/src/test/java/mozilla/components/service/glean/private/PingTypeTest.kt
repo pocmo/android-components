@@ -5,6 +5,7 @@
 package mozilla.components.service.glean.private
 
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.TimeUnit
 import mozilla.components.service.glean.Glean
 import mozilla.components.service.glean.checkPingSchema
 import mozilla.components.service.glean.getContextWithMockedInfo
@@ -24,7 +25,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class PingTypeTest {

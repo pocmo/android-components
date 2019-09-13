@@ -4,9 +4,9 @@
 
 package mozilla.components.concept.engine.media
 
+import kotlin.properties.Delegates
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import kotlin.properties.Delegates
 
 /**
  * Value type that represents a media element that is present on the currently displayed page in a session.

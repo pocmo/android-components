@@ -4,6 +4,7 @@
 
 package mozilla.components.browser.toolbar
 
+import java.util.concurrent.Executor
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelChildren
@@ -22,7 +23,6 @@ import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.util.concurrent.Executor
 
 class AsyncFilterListenerTest {
     @Test

@@ -11,11 +11,11 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.nio.charset.StandardCharsets
 import mozilla.components.lib.dataprotect.Keystore
 import mozilla.components.support.base.log.logger.Logger
 import org.mozilla.samples.dataprotect.Constants.B64_FLAGS
 import org.mozilla.samples.dataprotect.Constants.KEYSTORE_LABEL
-import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
     private val logger: Logger = Logger("dataprotect")

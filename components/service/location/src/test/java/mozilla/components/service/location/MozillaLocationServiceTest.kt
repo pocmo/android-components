@@ -5,6 +5,7 @@
 package mozilla.components.service.location
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.MutableHeaders
@@ -28,7 +29,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
-import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class MozillaLocationServiceTest {

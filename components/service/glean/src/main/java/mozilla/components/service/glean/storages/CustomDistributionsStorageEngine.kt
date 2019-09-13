@@ -9,7 +9,6 @@ import mozilla.components.service.glean.error.ErrorRecording
 import mozilla.components.service.glean.histogram.PrecomputedHistogram
 import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.service.glean.private.HistogramType
-
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONObject
 

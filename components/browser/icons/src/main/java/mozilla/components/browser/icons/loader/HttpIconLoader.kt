@@ -9,6 +9,8 @@ import android.os.SystemClock
 import android.util.LruCache
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.concept.fetch.Client
@@ -17,8 +19,6 @@ import mozilla.components.concept.fetch.Response
 import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.net.isHttpOrHttps
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 private const val CONNECT_TIMEOUT = 2L // Seconds
 private const val READ_TIMEOUT = 10L // Seconds

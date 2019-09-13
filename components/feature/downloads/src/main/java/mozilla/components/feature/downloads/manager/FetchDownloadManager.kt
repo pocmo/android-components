@@ -19,12 +19,12 @@ import android.util.LongSparseArray
 import androidx.core.util.isEmpty
 import androidx.core.util.set
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlin.random.Random
+import kotlin.reflect.KClass
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.feature.downloads.AbstractFetchDownloadService
 import mozilla.components.feature.downloads.ext.isScheme
 import mozilla.components.feature.downloads.ext.putDownloadExtra
-import kotlin.random.Random
-import kotlin.reflect.KClass
 
 /**
  * Handles the interactions with [AbstractFetchDownloadService].

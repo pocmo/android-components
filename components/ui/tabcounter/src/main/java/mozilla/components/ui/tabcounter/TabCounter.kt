@@ -15,9 +15,9 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
+import java.text.NumberFormat
 import mozilla.components.support.ktx.android.view.onNextGlobalLayout
 import mozilla.components.support.utils.DrawableUtils
-import java.text.NumberFormat
 
 @Suppress("LargeClass")
 open class TabCounter @JvmOverloads constructor(

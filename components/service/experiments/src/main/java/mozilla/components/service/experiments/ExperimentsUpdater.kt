@@ -13,8 +13,8 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import mozilla.components.support.base.log.logger.Logger
 import java.util.concurrent.TimeUnit
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * This class represents a [Worker] object that will fetch updates to the experiments.

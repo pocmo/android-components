@@ -9,8 +9,8 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.media.Media
 import mozilla.components.concept.engine.media.RecordingDevice
 import org.mozilla.geckoview.GeckoSession
-import org.mozilla.geckoview.MediaElement
 import org.mozilla.geckoview.GeckoSession.MediaDelegate.RecordingDevice as GeckoRecordingDevice
+import org.mozilla.geckoview.MediaElement
 
 /**
  * [GeckoSession.MediaDelegate] implementation for wrapping [MediaElement] instances in [GeckoMedia] ([Media]) and

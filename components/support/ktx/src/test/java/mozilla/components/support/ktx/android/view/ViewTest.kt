@@ -10,6 +10,9 @@ import android.view.WindowManager
 import android.widget.EditText
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -35,9 +38,6 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.robolectric.Robolectric
 import org.robolectric.shadows.ShadowLooper
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ViewTest {

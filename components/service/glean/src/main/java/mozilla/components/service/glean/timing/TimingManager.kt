@@ -6,11 +6,11 @@ package mozilla.components.service.glean.timing
 
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
+import java.util.WeakHashMap
 import mozilla.components.service.glean.error.ErrorRecording
 import mozilla.components.service.glean.error.ErrorRecording.recordError
 import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.support.base.log.logger.Logger
-import java.util.WeakHashMap
 
 /**
  * An opaque type that represents a Glean timer identifier.

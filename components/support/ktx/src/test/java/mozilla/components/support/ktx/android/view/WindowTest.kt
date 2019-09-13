@@ -11,6 +11,7 @@ import android.os.Build
 import android.view.View
 import android.view.Window
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlin.reflect.jvm.javaField
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -21,7 +22,6 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations.initMocks
 import org.robolectric.util.ReflectionHelpers.setStaticField
-import kotlin.reflect.jvm.javaField
 
 @RunWith(AndroidJUnit4::class)
 class WindowTest {

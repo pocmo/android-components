@@ -5,6 +5,7 @@
 package mozilla.components.feature.awesomebar.provider
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import mozilla.components.concept.storage.BookmarkInfo
 import mozilla.components.concept.storage.BookmarkNode
@@ -16,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class BookmarksStorageSuggestionProviderTest {

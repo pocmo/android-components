@@ -5,6 +5,8 @@
 package mozilla.components.service.experiments
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Calendar
+import java.util.Date
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -16,8 +18,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Calendar
-import java.util.Date
 
 @RunWith(AndroidJUnit4::class)
 class SignatureVerifierTest {

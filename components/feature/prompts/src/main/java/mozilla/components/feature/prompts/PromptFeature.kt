@@ -10,6 +10,8 @@ import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import java.security.InvalidParameterException
+import java.util.Date
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
@@ -31,8 +33,6 @@ import mozilla.components.feature.prompts.ChoiceDialogFragment.Companion.SINGLE_
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.support.base.feature.OnNeedToRequestPermissions
 import mozilla.components.support.base.feature.PermissionsFeature
-import java.security.InvalidParameterException
-import java.util.Date
 
 @VisibleForTesting(otherwise = PRIVATE)
 internal const val FRAGMENT_TAG = "mozac_feature_prompt_dialog"

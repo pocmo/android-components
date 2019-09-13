@@ -8,6 +8,11 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.FileInputStream
+import java.security.InvalidParameterException
+import java.util.Calendar
+import java.util.Calendar.YEAR
+import java.util.Date
 import mozilla.components.browser.engine.gecko.GeckoEngineSession
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.prompt.Choice
@@ -47,11 +52,6 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_TIME
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_WEEK
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.TextCallback
 import org.robolectric.Shadows.shadowOf
-import java.io.FileInputStream
-import java.security.InvalidParameterException
-import java.util.Calendar
-import java.util.Calendar.YEAR
-import java.util.Date
 
 typealias GeckoChoice = GeckoSession.PromptDelegate.Choice
 

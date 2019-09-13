@@ -1,6 +1,9 @@
 package mozilla.components.feature.prompts.widget
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Calendar.DECEMBER
+import java.util.Calendar.FEBRUARY
+import java.util.Calendar.JANUARY
 import mozilla.components.feature.prompts.ext.month
 import mozilla.components.feature.prompts.ext.now
 import mozilla.components.feature.prompts.ext.toCalendar
@@ -12,9 +15,6 @@ import mozilla.components.support.test.robolectric.testContext
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Calendar.DECEMBER
-import java.util.Calendar.FEBRUARY
-import java.util.Calendar.JANUARY
 
 @RunWith(AndroidJUnit4::class)
 class MonthAndYearPickerTest {

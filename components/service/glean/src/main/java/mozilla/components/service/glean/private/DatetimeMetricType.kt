@@ -5,12 +5,12 @@
 package mozilla.components.service.glean.private
 
 import androidx.annotation.VisibleForTesting
+import java.util.Calendar
+import java.util.Date
 import mozilla.components.service.glean.Dispatchers
 import mozilla.components.service.glean.storages.DatetimesStorageEngine
 import mozilla.components.service.glean.utils.parseISOTimeString
 import mozilla.components.support.base.log.logger.Logger
-import java.util.Calendar
-import java.util.Date
 
 /**
  * This implements the developer facing API for recording datetime metrics.

@@ -8,9 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Parcelable
-import mozilla.components.support.base.log.logger.Logger
-
 import java.util.ArrayList
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * External applications can pass values into Intents that can cause us to crash: in defense,

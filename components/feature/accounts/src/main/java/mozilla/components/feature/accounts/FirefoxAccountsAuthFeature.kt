@@ -6,6 +6,7 @@ package mozilla.components.feature.accounts
 
 import android.content.Context
 import android.net.Uri
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,7 +15,6 @@ import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.service.fxa.FxaAuthData
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.toAuthType
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Ties together an account manager with a session manager/tabs implementation, facilitating an

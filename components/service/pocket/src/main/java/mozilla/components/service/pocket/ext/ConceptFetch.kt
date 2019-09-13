@@ -5,12 +5,12 @@
 package mozilla.components.service.pocket.ext
 
 import androidx.annotation.WorkerThread
+import java.io.IOException
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.Response
 import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.service.pocket.logger
-import java.io.IOException
 
 // extension functions for :concept-fetch module.
 

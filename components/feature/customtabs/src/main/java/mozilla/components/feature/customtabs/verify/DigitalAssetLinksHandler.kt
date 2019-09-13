@@ -7,13 +7,13 @@ package mozilla.components.feature.customtabs.verify
 import android.webkit.URLUtil
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.Response
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * Digital Asset Links APIs allows any caller to check pre declared

@@ -5,11 +5,10 @@
 package mozilla.components.service.glean.storages
 
 import android.annotation.SuppressLint
-import mozilla.components.support.base.log.logger.Logger
-import mozilla.components.support.ktx.android.org.json.toJSON
-
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import mozilla.components.support.base.log.logger.Logger
+import mozilla.components.support.ktx.android.org.json.toJSON
 import org.json.JSONObject
 
 /**

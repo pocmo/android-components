@@ -5,6 +5,7 @@
 package mozilla.components.browser.search.suggestions
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.search.SearchEngineManager
 import mozilla.components.browser.search.SearchEngineParser
@@ -14,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
-import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class SearchSuggestionClientTest {

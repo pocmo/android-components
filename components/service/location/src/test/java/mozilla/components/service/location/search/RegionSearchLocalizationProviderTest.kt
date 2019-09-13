@@ -4,6 +4,7 @@
 
 package mozilla.components.service.location.search
 
+import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import mozilla.components.service.location.MozillaLocationService
 import mozilla.components.support.test.mock
@@ -13,7 +14,6 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.doReturn
-import java.util.Locale
 
 class RegionSearchLocalizationProviderTest {
     private var cachedLocale: Locale? = null

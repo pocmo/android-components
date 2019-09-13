@@ -5,14 +5,14 @@
 package mozilla.components.feature.downloads.ext
 
 import androidx.core.net.toUri
+import java.io.InputStream
+import java.net.URLConnection
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.concept.fetch.Headers
 import mozilla.components.concept.fetch.Headers.Names.CONTENT_DISPOSITION
 import mozilla.components.concept.fetch.Headers.Names.CONTENT_LENGTH
 import mozilla.components.concept.fetch.Headers.Names.CONTENT_TYPE
 import mozilla.components.support.utils.DownloadUtils
-import java.io.InputStream
-import java.net.URLConnection
 
 internal fun DownloadState.isScheme(protocols: Iterable<String>): Boolean {
     val scheme = url.trim().toUri().scheme ?: return false

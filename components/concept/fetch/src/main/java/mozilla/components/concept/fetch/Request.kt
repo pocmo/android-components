@@ -5,12 +5,12 @@
 package mozilla.components.concept.fetch
 
 import android.net.Uri
-import mozilla.components.concept.fetch.Request.CookiePolicy
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
+import mozilla.components.concept.fetch.Request.CookiePolicy
 
 /**
  * The [Request] data class represents a resource request to be send by a [Client].

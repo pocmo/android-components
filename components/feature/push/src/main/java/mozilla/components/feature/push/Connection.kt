@@ -8,11 +8,11 @@ package mozilla.components.feature.push
 
 import androidx.annotation.GuardedBy
 import androidx.annotation.VisibleForTesting
+import java.io.Closeable
 import mozilla.appservices.push.BridgeType
 import mozilla.appservices.push.PushAPI
 import mozilla.appservices.push.PushManager
 import mozilla.appservices.push.SubscriptionResponse
-import java.io.Closeable
 
 /**
  * An interface that wraps the [PushAPI].

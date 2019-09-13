@@ -7,6 +7,9 @@ package mozilla.components.feature.readerview
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
+import kotlin.properties.Delegates.observable
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
@@ -15,18 +18,15 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.webextension.MessageHandler
 import mozilla.components.concept.engine.webextension.Port
 import mozilla.components.concept.engine.webextension.WebExtension
+import mozilla.components.feature.readerview.ReaderViewFeature.ColorScheme.LIGHT
+import mozilla.components.feature.readerview.ReaderViewFeature.FontType.SERIF
 import mozilla.components.feature.readerview.internal.ReaderViewControlsInteractor
 import mozilla.components.feature.readerview.internal.ReaderViewControlsPresenter
 import mozilla.components.feature.readerview.view.ReaderViewControlsView
-import mozilla.components.feature.readerview.ReaderViewFeature.ColorScheme.LIGHT
-import mozilla.components.feature.readerview.ReaderViewFeature.FontType.SERIF
 import mozilla.components.support.base.feature.BackHandler
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONObject
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
-import kotlin.properties.Delegates.observable
 
 typealias OnReaderViewAvailableChange = (available: Boolean) -> Unit
 

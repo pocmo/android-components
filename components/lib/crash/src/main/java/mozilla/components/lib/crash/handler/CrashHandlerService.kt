@@ -6,8 +6,8 @@ package mozilla.components.lib.crash.handler
 
 import android.app.IntentService
 import android.content.Intent
-import mozilla.components.lib.crash.CrashReporter
 import mozilla.components.lib.crash.Crash
+import mozilla.components.lib.crash.CrashReporter
 
 private const val WORKER_THREAD_NAME = "CrashHandlerService"
 

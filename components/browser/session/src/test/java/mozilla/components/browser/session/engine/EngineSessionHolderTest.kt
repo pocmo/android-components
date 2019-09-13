@@ -4,13 +4,13 @@
 
 package mozilla.components.browser.session.engine
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import mozilla.components.concept.engine.EngineSession
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.Mockito.mock
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 class EngineSessionHolderTest {
 

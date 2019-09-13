@@ -5,6 +5,9 @@
 package mozilla.components.browser.engine.gecko.fetch
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
+import java.nio.charset.Charset
+import java.util.concurrent.TimeoutException
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Request
 import mozilla.components.support.test.any
@@ -30,9 +33,6 @@ import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.WebRequest
 import org.mozilla.geckoview.WebRequestError
 import org.mozilla.geckoview.WebResponse
-import java.io.IOException
-import java.nio.charset.Charset
-import java.util.concurrent.TimeoutException
 
 /**
  * We can't run standard JVM unit tests for GWE. Therefore, we provide both

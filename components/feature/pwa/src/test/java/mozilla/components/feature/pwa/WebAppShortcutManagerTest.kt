@@ -13,6 +13,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlin.reflect.jvm.javaField
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
 import mozilla.components.browser.icons.BrowserIcons
@@ -40,7 +41,6 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations.initMocks
 import org.robolectric.util.ReflectionHelpers.setStaticField
-import kotlin.reflect.jvm.javaField
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)

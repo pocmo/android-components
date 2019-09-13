@@ -11,6 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
+import java.util.UUID
+import java.util.concurrent.ExecutionException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import mozilla.components.concept.fetch.Client
@@ -31,8 +33,6 @@ import org.json.JSONObject
 import org.junit.Assert
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import java.util.UUID
-import java.util.concurrent.ExecutionException
 
 /**
  * Checks ping content against the Glean ping schema.

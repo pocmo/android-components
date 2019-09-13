@@ -5,12 +5,12 @@
 package mozilla.components.support.ktx.java.io
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class FileKtTest {

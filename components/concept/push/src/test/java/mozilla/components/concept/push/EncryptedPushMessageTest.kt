@@ -6,10 +6,10 @@
 
 package mozilla.components.concept.push
 
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.util.UUID
 
 class EncryptedPushMessageTest {
 

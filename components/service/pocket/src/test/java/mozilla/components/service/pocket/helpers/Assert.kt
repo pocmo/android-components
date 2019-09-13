@@ -4,6 +4,8 @@
 
 package mozilla.components.service.pocket.helpers
 
+import kotlin.reflect.KClass
+import kotlin.reflect.KVisibility
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Request
@@ -15,8 +17,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import kotlin.reflect.KClass
-import kotlin.reflect.KVisibility
 
 fun <T : Any> assertConstructorsVisibility(assertedClass: KClass<T>, visibility: KVisibility) {
     assertedClass.constructors.forEach {

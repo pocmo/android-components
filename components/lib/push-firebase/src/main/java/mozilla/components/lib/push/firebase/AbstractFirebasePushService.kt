@@ -14,6 +14,8 @@ import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import java.io.IOException
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,8 +24,6 @@ import mozilla.components.concept.push.PushError
 import mozilla.components.concept.push.PushProcessor
 import mozilla.components.concept.push.PushService
 import mozilla.components.support.base.log.logger.Logger
-import java.io.IOException
-import kotlin.coroutines.CoroutineContext
 
 /**
  * A Firebase Cloud Messaging implementation of the [PushService] for Android devices that support Google Play Services.

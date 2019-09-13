@@ -14,9 +14,9 @@ import androidx.annotation.VisibleForTesting
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import com.google.android.material.snackbar.Snackbar
-import mozilla.components.browser.toolbar.BrowserToolbar
 import kotlin.math.max
 import kotlin.math.min
+import mozilla.components.browser.toolbar.BrowserToolbar
 
 private const val SNAP_ANIMATION_DURATION = 150L
 

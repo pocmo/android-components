@@ -4,12 +4,12 @@
 
 package mozilla.components.concept.engine
 
-import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
+import kotlin.reflect.KProperty
 import mozilla.components.concept.engine.EngineSession.SafeBrowsingPolicy
+import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
 import mozilla.components.concept.engine.history.HistoryTrackingDelegate
 import mozilla.components.concept.engine.mediaquery.PreferredColorScheme
 import mozilla.components.concept.engine.request.RequestInterceptor
-import kotlin.reflect.KProperty
 
 /**
  * Holds settings of an engine or session. Concrete engine

@@ -10,6 +10,8 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.io.File
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,25 +23,23 @@ import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
-import mozilla.components.service.fxa.FirefoxAccount
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
-import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.DeviceConfig
+import mozilla.components.service.fxa.FirefoxAccount
 import mozilla.components.service.fxa.FxaAuthData
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.SyncConfig
 import mozilla.components.service.fxa.SyncEngine
+import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 import mozilla.components.service.fxa.toAuthType
 import mozilla.components.service.sync.logins.AsyncLoginsStorageAdapter
 import mozilla.components.service.sync.logins.SyncableLoginsStore
-import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.sink.AndroidLogSink
+import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.rustlog.RustLog
-import java.io.File
-import kotlin.coroutines.CoroutineContext
 
 const val CLIENT_ID = "3c49430b43dfba77"
 const val REDIRECT_URL = "https://accounts.firefox.com/oauth/success/$CLIENT_ID"

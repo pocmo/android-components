@@ -4,13 +4,13 @@
 
 package mozilla.components.support.ktx.kotlin
 
-import mozilla.components.support.utils.URLStringUtils
 import java.security.MessageDigest
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.text.RegexOption.IGNORE_CASE
+import mozilla.components.support.utils.URLStringUtils
 
 /**
  * A collection of regular expressions used in the `is*` methods below.

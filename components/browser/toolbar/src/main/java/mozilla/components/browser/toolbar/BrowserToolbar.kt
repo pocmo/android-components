@@ -20,6 +20,8 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.view.forEach
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.isVisible
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,8 +43,6 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.ui.autocomplete.AutocompleteView
 import mozilla.components.ui.autocomplete.InlineAutocompleteEditText
 import mozilla.components.ui.autocomplete.OnFilterListener
-import java.util.concurrent.Executors
-import kotlin.coroutines.CoroutineContext
 
 private const val AUTOCOMPLETE_QUERY_THREADS = 3
 

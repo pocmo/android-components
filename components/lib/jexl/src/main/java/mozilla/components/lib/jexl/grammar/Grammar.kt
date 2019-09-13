@@ -4,6 +4,7 @@
 
 package mozilla.components.lib.jexl.grammar
 
+import kotlin.math.floor
 import mozilla.components.lib.jexl.evaluator.EvaluatorException
 import mozilla.components.lib.jexl.lexer.Token
 import mozilla.components.lib.jexl.value.JexlArray
@@ -12,7 +13,6 @@ import mozilla.components.lib.jexl.value.JexlDouble
 import mozilla.components.lib.jexl.value.JexlInteger
 import mozilla.components.lib.jexl.value.JexlString
 import mozilla.components.lib.jexl.value.JexlValue
-import kotlin.math.floor
 
 /**
  * Grammar of the JEXL language.

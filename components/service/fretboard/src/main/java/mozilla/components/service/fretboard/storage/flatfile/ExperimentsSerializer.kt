@@ -5,8 +5,8 @@
 package mozilla.components.service.fretboard.storage.flatfile
 
 import mozilla.components.service.fretboard.Experiment
-import mozilla.components.service.fretboard.JSONExperimentParser
 import mozilla.components.service.fretboard.ExperimentsSnapshot
+import mozilla.components.service.fretboard.JSONExperimentParser
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

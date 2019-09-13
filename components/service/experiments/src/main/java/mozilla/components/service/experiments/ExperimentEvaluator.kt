@@ -7,11 +7,11 @@ package mozilla.components.service.experiments
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Looper
-import androidx.annotation.VisibleForTesting
 import android.text.TextUtils
+import androidx.annotation.VisibleForTesting
+import java.util.zip.CRC32
 import mozilla.components.service.experiments.util.VersionString
 import mozilla.components.support.base.log.logger.Logger
-import java.util.zip.CRC32
 
 /**
  * Class used to determine if a specific experiment should be enabled or not

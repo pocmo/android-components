@@ -6,27 +6,27 @@ package mozilla.components.service.glean.scheduler
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.annotation.VisibleForTesting
 import android.text.format.DateUtils
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.Worker
 import androidx.work.WorkManager
+import androidx.work.Worker
 import androidx.work.WorkerParameters
-import mozilla.components.service.glean.Dispatchers
-import mozilla.components.service.glean.Glean
-import mozilla.components.service.glean.GleanMetrics.Pings
-import mozilla.components.support.base.log.logger.Logger
-import mozilla.components.service.glean.utils.getISOTimeString
-import mozilla.components.service.glean.utils.parseISOTimeString
-import mozilla.components.service.glean.private.TimeUnit
 import java.util.Calendar
 import java.util.Date
 import java.util.concurrent.TimeUnit as AndroidTimeUnit
+import mozilla.components.service.glean.Dispatchers
+import mozilla.components.service.glean.Glean
+import mozilla.components.service.glean.GleanMetrics.Pings
+import mozilla.components.service.glean.private.TimeUnit
+import mozilla.components.service.glean.utils.getISOTimeString
+import mozilla.components.service.glean.utils.parseISOTimeString
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * MetricsPingScheduler facilitates scheduling the periodic assembling of metrics pings,

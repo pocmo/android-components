@@ -9,11 +9,11 @@ import android.content.Context
 import android.widget.NumberPicker
 import android.widget.ScrollView
 import androidx.annotation.VisibleForTesting
+import java.util.Calendar
 import mozilla.components.feature.prompts.R
 import mozilla.components.feature.prompts.ext.month
 import mozilla.components.feature.prompts.ext.now
 import mozilla.components.feature.prompts.ext.year
-import java.util.Calendar
 
 /**
  * UI widget that allows to select a month and a year.

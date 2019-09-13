@@ -4,13 +4,13 @@
 
 package mozilla.components.lib.fetch.httpurlconnection
 
+import java.net.HttpURLConnection
+import java.net.URL
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Request
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.HttpURLConnection
-import java.net.URL
 
 class HttpUrlConnectionFetchTestCases : mozilla.components.tooling.fetch.tests.FetchTestCases() {
     override fun createNewClient(): Client = HttpURLConnectionClient()

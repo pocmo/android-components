@@ -6,6 +6,11 @@ package mozilla.components.browser.engine.gecko.prompt
 
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.FileInputStream
+import java.security.InvalidParameterException
+import java.util.Calendar
+import java.util.Calendar.YEAR
+import java.util.Date
 import mozilla.components.browser.engine.gecko.GeckoEngineSession
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.prompt.Choice
@@ -24,7 +29,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.gecko.util.GeckoBundle
 import org.mozilla.geckoview.GeckoSession
-import java.security.InvalidParameterException
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DateTimePrompt.Type.DATE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DateTimePrompt.Type.DATETIME_LOCAL
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DateTimePrompt.Type.MONTH
@@ -34,10 +38,6 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.FilePrompt.Capture.ANY
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.FilePrompt.Capture.NONE
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.FilePrompt.Capture.USER
 import org.robolectric.Shadows.shadowOf
-import java.io.FileInputStream
-import java.util.Calendar
-import java.util.Calendar.YEAR
-import java.util.Date
 typealias GeckoChoice = GeckoSession.PromptDelegate.ChoicePrompt.Choice
 typealias GECKO_AUTH_LEVEL = GeckoSession.PromptDelegate.AuthPrompt.AuthOptions.Level
 typealias GECKO_PROMPT_CHOICE_TYPE = GeckoSession.PromptDelegate.ChoicePrompt.Type

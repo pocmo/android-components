@@ -8,12 +8,12 @@ import android.util.TypedValue
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
+import java.lang.ref.WeakReference
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.toolbar.Toolbar
 import mozilla.components.feature.tabs.R
 import mozilla.components.ui.tabcounter.TabCounter
-import java.lang.ref.WeakReference
 
 /**
  * A [Toolbar.Action] implementation that shows a [TabCounter].

@@ -6,11 +6,11 @@ package mozilla.components.browser.engine.gecko
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.MotionEvent
+import androidx.annotation.VisibleForTesting
 import androidx.core.view.NestedScrollingChild
 import androidx.core.view.NestedScrollingChildHelper
 import androidx.core.view.ViewCompat
-import android.view.MotionEvent
-import androidx.annotation.VisibleForTesting
 import org.mozilla.geckoview.GeckoView
 
 /**

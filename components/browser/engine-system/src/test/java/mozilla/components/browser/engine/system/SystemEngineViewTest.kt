@@ -28,12 +28,17 @@ import android.webkit.WebView.HitTestResult
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.StringReader
+import java.util.Calendar
+import java.util.Date
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.engine.system.matcher.UrlMatcher
 import mozilla.components.browser.errorpages.ErrorType
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
+import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy.TrackingCategory
 import mozilla.components.concept.engine.HitResult
+import mozilla.components.concept.engine.content.blocking.Tracker
 import mozilla.components.concept.engine.history.HistoryTrackingDelegate
 import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
@@ -66,11 +71,6 @@ import org.mockito.Mockito.verifyZeroInteractions
 import org.robolectric.Robolectric
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.util.Calendar
-import java.util.Date
-import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy.TrackingCategory
-import mozilla.components.concept.engine.content.blocking.Tracker
-import java.io.StringReader
 
 @RunWith(AndroidJUnit4::class)
 class SystemEngineViewTest {

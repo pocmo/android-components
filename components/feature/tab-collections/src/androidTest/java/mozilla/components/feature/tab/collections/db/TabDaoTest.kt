@@ -8,13 +8,13 @@ import android.content.Context
 import androidx.paging.PagedList
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import java.util.UUID
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 class TabDaoTest {
     private val context: Context

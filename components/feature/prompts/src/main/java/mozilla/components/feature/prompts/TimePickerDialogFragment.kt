@@ -22,6 +22,8 @@ import android.widget.DatePicker
 import android.widget.TimePicker
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
+import java.util.Calendar
+import java.util.Date
 import mozilla.components.feature.prompts.ext.day
 import mozilla.components.feature.prompts.ext.hour
 import mozilla.components.feature.prompts.ext.minute
@@ -29,8 +31,6 @@ import mozilla.components.feature.prompts.ext.month
 import mozilla.components.feature.prompts.ext.toCalendar
 import mozilla.components.feature.prompts.ext.year
 import mozilla.components.feature.prompts.widget.MonthAndYearPicker
-import java.util.Calendar
-import java.util.Date
 
 private const val KEY_INITIAL_DATE = "KEY_INITIAL_DATE"
 private const val KEY_MIN_DATE = "KEY_MIN_DATE"

@@ -5,15 +5,16 @@
 package org.mozilla.samples.fxa
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import androidx.browser.customtabs.CustomTabsIntent
 import android.view.View
-import android.content.Intent
 import android.widget.CheckBox
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.app.ActivityCompat
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,11 +25,10 @@ import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.service.fxa.FirefoxAccount
 import mozilla.components.service.fxa.FxaException
 import mozilla.components.service.fxa.ServerConfig
-import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.sink.AndroidLogSink
+import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.rustlog.RustLog
-import kotlin.coroutines.CoroutineContext
 
 @Suppress("TooManyFunctions")
 open class MainActivity : AppCompatActivity(), LoginFragment.OnLoginCompleteListener, CoroutineScope {

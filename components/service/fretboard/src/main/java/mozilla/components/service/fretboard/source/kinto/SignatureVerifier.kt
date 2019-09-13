@@ -5,13 +5,6 @@
 package mozilla.components.service.fretboard.source.kinto
 
 import android.util.Base64
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.Request
-import mozilla.components.service.fretboard.Experiment
-import mozilla.components.service.fretboard.ExperimentDownloadException
-import mozilla.components.service.fretboard.JSONExperimentParser
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
@@ -26,6 +19,13 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.Request
+import mozilla.components.service.fretboard.Experiment
+import mozilla.components.service.fretboard.ExperimentDownloadException
+import mozilla.components.service.fretboard.JSONExperimentParser
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * This class is used to validate the signature of the downloaded list of experiments

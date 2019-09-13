@@ -6,6 +6,7 @@ package mozilla.components.concept.engine
 
 import android.content.Context
 import android.util.AttributeSet
+import java.lang.UnsupportedOperationException
 import mozilla.components.concept.engine.Engine.BrowsingData
 import mozilla.components.concept.engine.utils.EngineVersion
 import org.json.JSONObject
@@ -14,7 +15,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.lang.UnsupportedOperationException
 
 class EngineTest {
 

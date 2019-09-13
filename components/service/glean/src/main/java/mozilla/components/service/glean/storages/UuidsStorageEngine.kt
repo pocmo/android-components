@@ -6,9 +6,9 @@ package mozilla.components.service.glean.storages
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
+import java.util.UUID
 import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.support.base.log.logger.Logger
-import java.util.UUID
 
 /**
  * This singleton handles the in-memory storage logic for uuids. It is meant to be used by

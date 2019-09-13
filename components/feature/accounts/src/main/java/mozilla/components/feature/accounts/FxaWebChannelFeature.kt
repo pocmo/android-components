@@ -6,6 +6,8 @@ package mozilla.components.feature.accounts
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import java.lang.ClassCastException
+import java.util.WeakHashMap
 import mozilla.components.browser.session.SelectionAwareSessionObserver
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
@@ -25,8 +27,6 @@ import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.lang.ClassCastException
-import java.util.WeakHashMap
 
 /**
  * Feature implementation that provides Firefox Accounts WebChannel support.

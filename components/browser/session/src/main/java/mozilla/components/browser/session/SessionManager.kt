@@ -4,13 +4,14 @@
 
 package mozilla.components.browser.session
 
+import java.lang.IllegalArgumentException
 import mozilla.components.browser.session.ext.syncDispatch
 import mozilla.components.browser.session.ext.toCustomTabSessionState
 import mozilla.components.browser.session.ext.toTabSessionState
 import mozilla.components.browser.state.action.CustomTabListAction
 import mozilla.components.browser.state.action.EngineAction.LinkEngineSessionAction
-import mozilla.components.browser.state.action.EngineAction.UpdateEngineSessionStateAction
 import mozilla.components.browser.state.action.EngineAction.UnlinkEngineSessionAction
+import mozilla.components.browser.state.action.EngineAction.UpdateEngineSessionStateAction
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.store.BrowserStore
@@ -18,7 +19,6 @@ import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.support.base.observer.Observable
-import java.lang.IllegalArgumentException
 
 /**
  * This class provides access to a centralized registry of all active sessions.

@@ -5,6 +5,7 @@
 package mozilla.components.browser.domains.autocomplete
 
 import android.content.Context
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -13,7 +14,6 @@ import mozilla.components.browser.domains.CustomDomains
 import mozilla.components.browser.domains.Domain
 import mozilla.components.browser.domains.Domains
 import mozilla.components.browser.domains.into
-import java.util.Locale
 
 enum class DomainList(val listName: String) {
     DEFAULT("default"),

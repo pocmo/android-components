@@ -5,11 +5,11 @@
 package mozilla.components.service.fxa
 
 import android.net.Uri
-import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.plus
 import mozilla.appservices.fxaclient.FirefoxAccount as InternalFxAcct
 import mozilla.components.concept.sync.AccessTokenInfo

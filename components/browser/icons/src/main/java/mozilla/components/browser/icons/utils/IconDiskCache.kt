@@ -8,6 +8,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.VisibleForTesting
 import com.jakewharton.disklrucache.DiskLruCache
+import java.io.File
+import java.io.IOException
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.browser.icons.extension.toIconResources
@@ -19,8 +21,6 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.kotlin.sha1
 import org.json.JSONArray
 import org.json.JSONException
-import java.io.File
-import java.io.IOException
 
 private const val RESOURCES_DISK_CACHE_VERSION = 1
 private const val ICON_DATA_DISK_CACHE_VERSION = 1

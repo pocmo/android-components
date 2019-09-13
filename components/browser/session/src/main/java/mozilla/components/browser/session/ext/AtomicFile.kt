@@ -5,13 +5,13 @@
 package mozilla.components.browser.session.ext
 
 import android.util.AtomicFile
+import java.io.FileOutputStream
+import java.io.IOException
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.storage.SnapshotSerializer
 import mozilla.components.concept.engine.Engine
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.FileOutputStream
-import java.io.IOException
 
 /**
  * Read a [SessionManager.Snapshot] from this [AtomicFile]. Returns `null` if no snapshot could be read.

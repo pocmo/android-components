@@ -4,11 +4,11 @@
 
 package mozilla.components.service.pocket.data
 
+import kotlin.reflect.KVisibility
 import mozilla.components.service.pocket.data.PocketListenArticleMetadata.Status
 import mozilla.components.service.pocket.helpers.assertConstructorsVisibility
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import kotlin.reflect.KVisibility
 
 class PocketListenArticleMetadataTest {
 

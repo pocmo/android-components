@@ -4,6 +4,8 @@
 
 package mozilla.components.concept.fetch
 
+import java.io.IOException
+import java.io.InputStream
 import mozilla.components.concept.fetch.Headers.Names.CONTENT_TYPE
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
@@ -15,8 +17,6 @@ import org.mockito.Mockito
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.io.IOException
-import java.io.InputStream
 
 class ResponseTest {
     @Test

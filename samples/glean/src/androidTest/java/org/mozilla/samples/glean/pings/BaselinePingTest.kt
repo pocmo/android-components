@@ -9,27 +9,26 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.ActivityTestRule
-import org.junit.Assert.assertEquals
-
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.mozilla.samples.glean.MainActivity
-import org.mozilla.samples.glean.getPingServer
 import androidx.test.uiautomator.UiDevice
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import mozilla.components.service.glean.config.Configuration
 import mozilla.components.service.glean.testing.GleanTestRule
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mozilla.samples.glean.MainActivity
+import org.mozilla.samples.glean.getPingServer
 import org.mozilla.samples.glean.getPingServerAddress
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class BaselinePingTest {
@@ -51,8 +50,7 @@ class BaselinePingTest {
     private fun waitForPingContent(
         pingName: String,
         maxAttempts: Int = 3
-    ): JSONObject?
-    {
+    ): JSONObject? {
         val server = getPingServer()
 
         var attempts = 0

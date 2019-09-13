@@ -19,13 +19,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.ActivityTestRule
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiSelector
+import java.util.concurrent.TimeUnit
 import mozilla.components.support.android.test.leaks.LeakDetectionRule
 import mozilla.components.support.android.test.rules.WebserverRule
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.TimeUnit
 
 private const val INITIAL_WAIT_SECONDS = 5L
 private const val WAIT_FOR_WEB_CONTENT_SECONDS = 15L

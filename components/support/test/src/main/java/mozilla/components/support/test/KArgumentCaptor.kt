@@ -6,8 +6,8 @@
 
 package mozilla.components.support.test
 
-import org.mockito.ArgumentCaptor
 import kotlin.reflect.KClass
+import org.mockito.ArgumentCaptor
 
 /**
  * Creates a [KArgumentCaptor] for given type.

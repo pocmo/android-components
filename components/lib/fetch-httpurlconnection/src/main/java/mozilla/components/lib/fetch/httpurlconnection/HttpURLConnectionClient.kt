@@ -4,12 +4,6 @@
 
 package mozilla.components.lib.fetch.httpurlconnection
 
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.Headers
-import mozilla.components.concept.fetch.MutableHeaders
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.Response
-import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient.Companion.getOrCreateCookieManager
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -18,6 +12,12 @@ import java.net.CookieManager
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.GZIPInputStream
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.Headers
+import mozilla.components.concept.fetch.MutableHeaders
+import mozilla.components.concept.fetch.Request
+import mozilla.components.concept.fetch.Response
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient.Companion.getOrCreateCookieManager
 
 /**
  * [HttpURLConnection] implementation of [Client].

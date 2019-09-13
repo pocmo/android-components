@@ -19,6 +19,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import java.io.Closeable
+import java.util.concurrent.TimeUnit
 import mozilla.components.concept.sync.AuthException
 import mozilla.components.concept.sync.SyncStatus
 import mozilla.components.service.fxa.SyncAuthInfoCache
@@ -28,8 +30,6 @@ import mozilla.components.service.fxa.manager.authErrorRegistry
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import java.io.Closeable
-import java.util.concurrent.TimeUnit
 
 private enum class SyncWorkerTag {
     Common,

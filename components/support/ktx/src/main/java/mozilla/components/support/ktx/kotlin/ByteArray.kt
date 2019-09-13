@@ -6,8 +6,8 @@ package mozilla.components.support.ktx.kotlin
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import mozilla.components.support.base.log.logger.Logger
 import java.security.MessageDigest
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * Checks whether the given [test] byte sequence exists at the [offset] of this [ByteArray]

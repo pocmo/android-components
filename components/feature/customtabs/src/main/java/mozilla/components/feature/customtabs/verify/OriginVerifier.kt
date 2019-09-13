@@ -13,9 +13,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.browser.customtabs.CustomTabsService.RELATION_HANDLE_ALL_URLS
 import androidx.browser.customtabs.CustomTabsService.RELATION_USE_AS_ORIGIN
 import androidx.browser.customtabs.CustomTabsService.Relation
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.withContext
-import mozilla.components.concept.fetch.Client
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -23,6 +20,9 @@ import java.security.cert.CertificateEncodingException
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.withContext
+import mozilla.components.concept.fetch.Client
 
 /**
  * Used to verify postMessage origin for a designated package name.

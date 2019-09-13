@@ -4,12 +4,12 @@
 
 package mozilla.components.browser.state.reducer
 
+import kotlin.math.max
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.TabSessionState
-import kotlin.math.max
 
 internal object TabListReducer {
     /**

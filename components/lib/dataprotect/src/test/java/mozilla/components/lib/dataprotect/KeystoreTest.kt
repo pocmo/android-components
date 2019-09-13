@@ -5,11 +5,6 @@
 package mozilla.components.lib.dataprotect
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
-import org.junit.runner.RunWith
 import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import java.security.Key
@@ -19,6 +14,11 @@ import java.security.Security
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import org.junit.Assert
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Test
+import org.junit.runner.RunWith
 
 private val DEFAULTPASS = "testit!".toCharArray()
 

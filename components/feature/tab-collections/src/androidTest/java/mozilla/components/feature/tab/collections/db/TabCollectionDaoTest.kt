@@ -9,6 +9,8 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.paging.PagedList
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import mozilla.components.support.android.test.awaitValue
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -16,8 +18,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 class TabCollectionDaoTest {
     private val context: Context

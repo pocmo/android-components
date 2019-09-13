@@ -10,6 +10,8 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.paging.PagedList
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.engine.DefaultSettings
@@ -31,8 +33,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 @Suppress("LargeClass") // Large test is large
 class TabCollectionStorageTest {

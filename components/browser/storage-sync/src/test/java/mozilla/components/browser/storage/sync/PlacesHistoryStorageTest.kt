@@ -5,6 +5,7 @@
 package mozilla.components.browser.storage.sync
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Date
 import kotlinx.coroutines.runBlocking
 import mozilla.appservices.places.InternalPanic
 import mozilla.appservices.places.PlacesException
@@ -36,7 +37,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Date
 
 @RunWith(AndroidJUnit4::class)
 class PlacesHistoryStorageTest {

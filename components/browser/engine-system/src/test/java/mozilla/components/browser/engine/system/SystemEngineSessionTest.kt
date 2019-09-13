@@ -13,6 +13,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebViewDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.lang.reflect.Modifier
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.engine.system.matcher.UrlMatcher
 import mozilla.components.browser.errorpages.ErrorType
@@ -42,7 +43,6 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.lang.reflect.Modifier
 
 @RunWith(AndroidJUnit4::class)
 class SystemEngineSessionTest {

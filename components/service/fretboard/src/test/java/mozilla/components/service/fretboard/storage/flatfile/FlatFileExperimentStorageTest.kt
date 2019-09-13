@@ -5,6 +5,9 @@
 package mozilla.components.service.fretboard.storage.flatfile
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import mozilla.components.service.fretboard.Experiment
 import mozilla.components.service.fretboard.ExperimentsSnapshot
 import mozilla.components.support.test.robolectric.testContext
@@ -15,9 +18,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
 
 @RunWith(AndroidJUnit4::class)
 class FlatFileExperimentStorageTest {

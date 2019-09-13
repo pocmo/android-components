@@ -6,8 +6,8 @@ package mozilla.components.service.fretboard.scheduler.jobscheduler
 
 import android.app.job.JobParameters
 import android.app.job.JobService
-import mozilla.components.service.fretboard.Fretboard
 import java.util.concurrent.Executors
+import mozilla.components.service.fretboard.Fretboard
 
 /**
  * JobScheduler job used to updating the list of experiments

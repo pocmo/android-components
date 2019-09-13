@@ -9,12 +9,12 @@ import android.util.AtomicFile
 import androidx.annotation.CheckResult
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
+import java.io.File
+import java.util.concurrent.TimeUnit
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.ext.readSnapshot
 import mozilla.components.browser.session.ext.writeSnapshot
 import mozilla.components.concept.engine.Engine
-import java.io.File
-import java.util.concurrent.TimeUnit
 
 private const val STORE_FILE_NAME_FORMAT = "mozilla_components_session_storage_%s.json"
 

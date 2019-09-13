@@ -4,6 +4,12 @@
 
 package mozilla.components.tooling.fetch.tests
 
+import java.io.File
+import java.io.IOException
+import java.lang.Exception
+import java.net.SocketTimeoutException
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import mozilla.components.concept.fetch.Client
@@ -22,12 +28,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.File
-import java.io.IOException
-import java.lang.Exception
-import java.net.SocketTimeoutException
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 /**
  * Generic test cases for concept-fetch implementations.

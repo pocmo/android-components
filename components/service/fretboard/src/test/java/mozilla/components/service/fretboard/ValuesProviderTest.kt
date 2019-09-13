@@ -5,14 +5,14 @@
 package mozilla.components.service.fretboard
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Locale
+import java.util.MissingResourceException
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
-import java.util.Locale
-import java.util.MissingResourceException
 
 @RunWith(AndroidJUnit4::class)
 class ValuesProviderTest {

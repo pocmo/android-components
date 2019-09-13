@@ -4,8 +4,8 @@
 
 package mozilla.components.service.glean.utils
 
-import mozilla.components.service.glean.private.TimeUnit
 import java.util.concurrent.TimeUnit as AndroidTimeUnit
+import mozilla.components.service.glean.private.TimeUnit
 
 /**
  * Convenience method to get a time in nanoseconds in a different, supported time unit.

@@ -13,6 +13,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentManager
+import java.security.InvalidParameterException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,7 +39,6 @@ import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.support.base.feature.OnNeedToRequestPermissions
 import mozilla.components.support.base.feature.PermissionsFeature
 import mozilla.components.support.ktx.android.content.isPermissionGranted
-import java.security.InvalidParameterException
 
 internal const val FRAGMENT_TAG = "mozac_feature_sitepermissions_prompt_dialog"
 

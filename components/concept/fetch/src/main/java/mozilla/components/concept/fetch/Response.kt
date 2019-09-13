@@ -4,14 +4,14 @@
 
 package mozilla.components.concept.fetch
 
-import mozilla.components.concept.fetch.Response.Body
-import mozilla.components.concept.fetch.Response.Companion.CLIENT_ERROR_STATUS_RANGE
-import mozilla.components.concept.fetch.Response.Companion.SUCCESS_STATUS_RANGE
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
+import mozilla.components.concept.fetch.Response.Body
+import mozilla.components.concept.fetch.Response.Companion.CLIENT_ERROR_STATUS_RANGE
+import mozilla.components.concept.fetch.Response.Companion.SUCCESS_STATUS_RANGE
 
 /**
  * The [Response] data class represents a response to a [Request] send by a [Client].

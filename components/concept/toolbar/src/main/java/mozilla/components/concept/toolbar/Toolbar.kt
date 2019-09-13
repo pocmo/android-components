@@ -12,9 +12,9 @@ import android.widget.ImageButton
 import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.AppCompatImageButton
 import androidx.appcompat.widget.AppCompatImageView
+import java.lang.ref.WeakReference
 import mozilla.components.support.base.android.Padding
 import mozilla.components.support.ktx.android.view.setPadding
-import java.lang.ref.WeakReference
 
 /**
  * Interface to be implemented by components that provide browser toolbar functionality.

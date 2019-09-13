@@ -6,6 +6,7 @@
 
 package mozilla.components.feature.sendtab
 
+import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -28,7 +29,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.util.UUID
 
 @ExperimentalCoroutinesApi
 class SendTabUseCasesTest {

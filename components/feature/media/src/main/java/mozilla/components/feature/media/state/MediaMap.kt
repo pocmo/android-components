@@ -4,9 +4,9 @@
 
 package mozilla.components.feature.media.state
 
+import java.util.WeakHashMap
 import mozilla.components.browser.session.Session
 import mozilla.components.concept.engine.media.Media
-import java.util.WeakHashMap
 
 /**
  * Internal helper to keep a list from [Session] instances to its [Media] and make it searchable.

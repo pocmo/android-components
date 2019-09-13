@@ -11,8 +11,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import androidx.annotation.VisibleForTesting
-import mozilla.components.support.ktx.android.net.isHttpOrHttps
 import java.util.UUID
+import mozilla.components.support.ktx.android.net.isHttpOrHttps
 
 private const val EXTRA_BROWSER_FALLBACK_URL = "browser_fallback_url"
 private const val MARKET_INTENT_URI_PACKAGE_PREFIX = "market://details?id="

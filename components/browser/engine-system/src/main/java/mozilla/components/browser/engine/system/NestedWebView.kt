@@ -6,16 +6,16 @@ package mozilla.components.browser.engine.system
 
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.core.view.NestedScrollingChild
-import androidx.core.view.NestedScrollingChildHelper
 import android.view.MotionEvent
-import android.view.MotionEvent.ACTION_MOVE
-import android.view.MotionEvent.ACTION_DOWN
-import android.view.MotionEvent.ACTION_UP
 import android.view.MotionEvent.ACTION_CANCEL
+import android.view.MotionEvent.ACTION_DOWN
+import android.view.MotionEvent.ACTION_MOVE
+import android.view.MotionEvent.ACTION_UP
 import android.view.MotionEvent.obtain
 import android.webkit.WebView
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.NestedScrollingChild
+import androidx.core.view.NestedScrollingChildHelper
 import androidx.core.view.ViewCompat
 
 /**

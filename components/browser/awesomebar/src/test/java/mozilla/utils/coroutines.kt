@@ -1,12 +1,12 @@
 package mozilla.utils
 
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import java.util.concurrent.Executors
 
 /**
  * Create single threaded dispatcher for test environment.

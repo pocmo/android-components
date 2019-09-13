@@ -5,6 +5,8 @@
 package mozilla.components.browser.session
 
 import android.graphics.Bitmap
+import java.util.UUID
+import kotlin.properties.Delegates
 import mozilla.components.browser.session.engine.EngineSessionHolder
 import mozilla.components.browser.session.engine.request.LoadRequestMetadata
 import mozilla.components.browser.session.engine.request.LoadRequestOption
@@ -46,8 +48,6 @@ import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.support.base.observer.Consumable
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import java.util.UUID
-import kotlin.properties.Delegates
 
 /**
  * Value type that represents the state of a browser session. Changes can be observed.

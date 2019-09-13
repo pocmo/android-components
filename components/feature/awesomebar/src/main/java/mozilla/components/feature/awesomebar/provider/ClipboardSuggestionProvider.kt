@@ -8,12 +8,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import java.util.UUID
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.feature.awesomebar.internal.loadLambda
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.support.utils.WebURLFinder
-import java.util.UUID
 
 private const val MIME_TYPE_TEXT_PLAIN = "text/plain"
 

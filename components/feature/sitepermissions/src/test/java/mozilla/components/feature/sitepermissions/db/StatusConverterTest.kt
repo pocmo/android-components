@@ -4,9 +4,9 @@
 
 package mozilla.components.feature.sitepermissions.db
 
+import mozilla.components.feature.sitepermissions.SitePermissions.Status.ALLOWED
 import mozilla.components.feature.sitepermissions.SitePermissions.Status.BLOCKED
 import mozilla.components.feature.sitepermissions.SitePermissions.Status.NO_DECISION
-import mozilla.components.feature.sitepermissions.SitePermissions.Status.ALLOWED
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

@@ -7,11 +7,12 @@ package mozilla.components.browser.engine.gecko
 import android.app.Activity
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
 import mozilla.components.browser.engine.gecko.mediaquery.toGeckoValue
 import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.Engine
-import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
 import mozilla.components.concept.engine.EngineSession.SafeBrowsingPolicy
+import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy
 import mozilla.components.concept.engine.EngineSession.TrackingProtectionPolicy.CookiePolicy
 import mozilla.components.concept.engine.UnsupportedSettingException
 import mozilla.components.concept.engine.mediaquery.PreferredColorScheme
@@ -40,9 +41,8 @@ import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.StorageController
-import org.robolectric.Robolectric
-import java.io.IOException
 import org.mozilla.geckoview.WebExtension as GeckoWebExtension
+import org.robolectric.Robolectric
 
 @RunWith(AndroidJUnit4::class)
 class GeckoEngineTest {

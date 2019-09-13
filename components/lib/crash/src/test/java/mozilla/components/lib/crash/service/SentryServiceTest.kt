@@ -9,8 +9,9 @@ import io.sentry.SentryClient
 import io.sentry.SentryClientFactory
 import io.sentry.context.Context
 import io.sentry.dsn.Dsn
-import mozilla.components.lib.crash.Crash
+import java.util.Date
 import mozilla.components.lib.crash.Breadcrumb
+import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.CrashReporter
 import mozilla.components.support.test.any
 import mozilla.components.support.test.eq
@@ -21,11 +22,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.spy
 import org.mockito.Mockito.`when`
-import java.util.Date
+import org.mockito.Mockito.never
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.verify
 
 @RunWith(AndroidJUnit4::class)
 class SentryServiceTest {

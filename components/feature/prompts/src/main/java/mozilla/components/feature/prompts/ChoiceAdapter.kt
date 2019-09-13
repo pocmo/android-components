@@ -6,8 +6,8 @@ import android.view.ViewGroup
 import android.widget.CheckedTextView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import mozilla.components.concept.engine.prompt.Choice
 import java.lang.IllegalArgumentException
+import mozilla.components.concept.engine.prompt.Choice
 
 /**
  * RecyclerView adapter for displaying choice items.

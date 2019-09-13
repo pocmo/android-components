@@ -5,18 +5,18 @@
 package org.mozilla.telemetry.net
 
 import androidx.annotation.VisibleForTesting
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.MutableHeaders
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.Response
-import mozilla.components.support.base.log.logger.Logger
-import org.mozilla.telemetry.config.TelemetryConfiguration
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import mozilla.components.concept.fetch.Client
+import mozilla.components.concept.fetch.MutableHeaders
+import mozilla.components.concept.fetch.Request
+import mozilla.components.concept.fetch.Response
+import mozilla.components.support.base.log.logger.Logger
+import org.mozilla.telemetry.config.TelemetryConfiguration
 
 class TelemetryClient(
     private val client: Client

@@ -5,11 +5,11 @@
 package mozilla.components.service.experiments
 
 import android.util.AtomicFile
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONException
-import java.io.FileNotFoundException
-import java.io.File
-import java.io.IOException
 
 /**
  * Class which uses a flat JSON file as an experiment storage mechanism

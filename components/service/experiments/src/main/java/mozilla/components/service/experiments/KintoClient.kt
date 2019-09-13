@@ -4,12 +4,12 @@
 
 package mozilla.components.service.experiments
 
+import java.io.IOException
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.support.base.log.logger.Logger
-import java.io.IOException
 
 /**
  * Helper class to make it easier to interact with Kinto

@@ -8,9 +8,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatActivity
+import java.util.Locale
 import mozilla.components.support.base.R
 import mozilla.components.support.base.log.logger.Logger
-import java.util.Locale
 
 /**
  * Helper for apps that want to change locale defined by the system.

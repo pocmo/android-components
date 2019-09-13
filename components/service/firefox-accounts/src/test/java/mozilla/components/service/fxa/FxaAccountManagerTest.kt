@@ -8,6 +8,10 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.lang.Exception
+import java.lang.IllegalArgumentException
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.runBlocking
@@ -27,12 +31,12 @@ import mozilla.components.concept.sync.StatePersistenceCallback
 import mozilla.components.service.fxa.manager.AccountState
 import mozilla.components.service.fxa.manager.Event
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.authErrorRegistry
 import mozilla.components.service.fxa.manager.SCOPE_SYNC
+import mozilla.components.service.fxa.manager.authErrorRegistry
 import mozilla.components.service.fxa.sharing.ShareableAccount
 import mozilla.components.service.fxa.sharing.ShareableAuthInfo
-import mozilla.components.service.fxa.sync.SyncManager
 import mozilla.components.service.fxa.sync.SyncDispatcher
+import mozilla.components.service.fxa.sync.SyncManager
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
@@ -51,17 +55,13 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyBoolean
-import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.reset
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.lang.Exception
-import java.lang.IllegalArgumentException
-import java.util.concurrent.TimeUnit
-import kotlin.coroutines.CoroutineContext
 
 // Same as the actual account manager, except we get to control how FirefoxAccountShaped instances
 // are created. This is necessary because due to some build issues (native dependencies not available

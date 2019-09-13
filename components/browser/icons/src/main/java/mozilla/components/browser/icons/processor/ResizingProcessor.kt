@@ -7,10 +7,10 @@ package mozilla.components.browser.icons.processor
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.VisibleForTesting
+import kotlin.math.roundToInt
 import mozilla.components.browser.icons.DesiredSize
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
-import kotlin.math.roundToInt
 
 /**
  * [IconProcessor] implementation for resizing the loaded icon based on the target size.

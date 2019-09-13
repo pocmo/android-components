@@ -5,8 +5,8 @@
 @file:Suppress("MatchingDeclarationName")
 package mozilla.components.browser.storage.sync
 
-import mozilla.appservices.places.SyncAuthInfo
 import java.util.Date
+import mozilla.appservices.places.SyncAuthInfo
 import mozilla.appservices.sync15.EngineInfo
 import mozilla.appservices.sync15.FailureReason
 import mozilla.components.concept.storage.VisitInfo

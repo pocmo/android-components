@@ -7,6 +7,7 @@ package mozilla.components.support.ktx.android.content.res
 import android.content.Context
 import android.content.res.AssetManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.ByteArrayInputStream
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -15,7 +16,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import java.io.ByteArrayInputStream
 
 @RunWith(AndroidJUnit4::class)
 class AssetManagerTest {

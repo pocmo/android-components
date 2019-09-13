@@ -6,6 +6,10 @@ package mozilla.components.browser.session.ext
 
 import android.util.AtomicFile
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.util.UUID
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.storage.SnapshotSerializer
@@ -23,10 +27,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class AtomicFileKtTest {

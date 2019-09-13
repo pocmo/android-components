@@ -1,6 +1,7 @@
 package mozilla.components.browser.storage.sync
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Date
 import kotlinx.coroutines.runBlocking
 import mozilla.appservices.places.BookmarkRoot
 import mozilla.appservices.places.BookmarkUpdateInfo
@@ -32,7 +33,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.util.Date
 
 @RunWith(AndroidJUnit4::class)
 class PlacesBookmarksStorageTest {

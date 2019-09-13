@@ -9,13 +9,13 @@ package mozilla.components.lib.push.amazon
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.annotation.VisibleForTesting
 import com.amazon.device.messaging.ADM
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import mozilla.components.concept.push.EncryptedPushMessage
 import mozilla.components.concept.push.PushError
 import mozilla.components.concept.push.PushProcessor
 import mozilla.components.concept.push.PushService
-import androidx.annotation.VisibleForTesting
 import mozilla.components.support.base.log.logger.Logger
 
 /**

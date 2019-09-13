@@ -7,13 +7,13 @@ package mozilla.components.lib.state
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.CheckResult
+import java.lang.ref.WeakReference
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
-import java.util.concurrent.Executors
 
 /**
  * Reducers specify how the application's [State] changes in response to [Action]s sent to the [Store].

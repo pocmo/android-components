@@ -5,8 +5,8 @@
 package mozilla.components.browser.session
 
 import android.os.Environment
-import mozilla.components.browser.state.state.content.DownloadState
 import java.util.UUID
+import mozilla.components.browser.state.state.content.DownloadState
 
 /**
  * Value type that represents a Download.

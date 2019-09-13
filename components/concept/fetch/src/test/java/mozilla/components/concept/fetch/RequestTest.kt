@@ -5,6 +5,12 @@
 package mozilla.components.concept.fetch
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.net.URLEncoder
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -12,12 +18,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.net.URLEncoder
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class RequestTest {

@@ -5,6 +5,7 @@
 package mozilla.components.browser.storage.memory
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.lang.Thread.sleep
 import kotlinx.coroutines.runBlocking
 import mozilla.components.concept.storage.PageObservation
 import mozilla.components.concept.storage.VisitType
@@ -12,7 +13,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.lang.Thread.sleep
 
 @RunWith(AndroidJUnit4::class)
 class InMemoryHistoryStorageTest {

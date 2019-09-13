@@ -7,19 +7,19 @@ package mozilla.components.lib.crash.service
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
 import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.GleanMetrics.CrashMetrics
 import mozilla.components.service.glean.testing.GleanTestRule
 import mozilla.components.support.test.whenever
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class GleanCrashReporterServiceTest {

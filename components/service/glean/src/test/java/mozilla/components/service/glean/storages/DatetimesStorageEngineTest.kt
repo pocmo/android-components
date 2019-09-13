@@ -6,6 +6,8 @@ package mozilla.components.service.glean.storages
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import java.util.Calendar
+import java.util.TimeZone
 import mozilla.components.service.glean.private.DatetimeMetricType
 import mozilla.components.service.glean.private.Lifetime
 import mozilla.components.service.glean.private.TimeUnit
@@ -19,8 +21,6 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
-import java.util.Calendar
-import java.util.TimeZone
 
 @RunWith(RobolectricTestRunner::class)
 class DatetimesStorageEngineTest {

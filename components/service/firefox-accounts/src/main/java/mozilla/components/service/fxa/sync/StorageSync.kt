@@ -11,9 +11,9 @@ import mozilla.components.concept.sync.AuthException
 import mozilla.components.concept.sync.AuthExceptionType
 import mozilla.components.concept.sync.StoreSyncStatus
 import mozilla.components.concept.sync.SyncAuthInfo
-import mozilla.components.concept.sync.SyncableStore
 import mozilla.components.concept.sync.SyncResult
 import mozilla.components.concept.sync.SyncStatus
+import mozilla.components.concept.sync.SyncableStore
 import mozilla.components.service.fxa.manager.authErrorRegistry
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable

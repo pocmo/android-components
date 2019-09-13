@@ -9,6 +9,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.test.core.app.ApplicationProvider
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.time.Instant
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -22,6 +31,7 @@ import mozilla.components.service.glean.private.Lifetime
 import mozilla.components.service.glean.private.NoExtraKeys
 import mozilla.components.service.glean.private.PingType
 import mozilla.components.service.glean.private.StringMetricType
+import mozilla.components.service.glean.private.TimeUnit as GleanTimeUnit
 import mozilla.components.service.glean.private.UuidMetricType
 import mozilla.components.service.glean.scheduler.GleanLifecycleObserver
 import mozilla.components.service.glean.scheduler.MetricsPingWorker
@@ -47,16 +57,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.robolectric.RobolectricTestRunner
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileReader
-import java.time.Instant
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-import mozilla.components.service.glean.private.TimeUnit as GleanTimeUnit
 
 @ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi

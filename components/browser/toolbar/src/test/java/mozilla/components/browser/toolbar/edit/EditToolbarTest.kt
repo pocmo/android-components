@@ -9,9 +9,10 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.core.view.contains
 import androidx.core.view.forEach
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.CountDownLatch
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.browser.toolbar.R
@@ -31,7 +32,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
-import java.util.concurrent.CountDownLatch
 
 @RunWith(AndroidJUnit4::class)
 class EditToolbarTest {

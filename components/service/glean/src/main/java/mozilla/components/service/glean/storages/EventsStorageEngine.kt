@@ -7,6 +7,9 @@ package mozilla.components.service.glean.storages
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import java.io.File
+import java.io.IOException
+import kotlinx.coroutines.Dispatchers as KotlinDispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -23,9 +26,6 @@ import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.File
-import java.io.IOException
-import kotlinx.coroutines.Dispatchers as KotlinDispatchers
 
 /**
  * This singleton handles the in-memory storage logic for events. It is meant to be used by

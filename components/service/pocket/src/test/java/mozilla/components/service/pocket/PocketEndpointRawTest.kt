@@ -6,6 +6,7 @@ package mozilla.components.service.pocket
 
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Headers.Names.USER_AGENT
 import mozilla.components.concept.fetch.Response
@@ -21,7 +22,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
-import java.io.IOException
 
 private const val VALID_API_KEY = "apiKey"
 private const val VALID_USER_AGENT = "userAgent"

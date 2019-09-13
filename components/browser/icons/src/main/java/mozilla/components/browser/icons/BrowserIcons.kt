@@ -10,6 +10,8 @@ import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
+import java.lang.ref.WeakReference
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -46,8 +48,6 @@ import mozilla.components.browser.session.utils.AllSessionsObserver
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.fetch.Client
 import mozilla.components.support.base.log.logger.Logger
-import java.lang.ref.WeakReference
-import java.util.concurrent.Executors
 
 private const val MAXIMUM_SCALE_FACTOR = 2.0f
 

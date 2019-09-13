@@ -9,11 +9,11 @@ import android.graphics.BitmapFactory
 import android.util.Size
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
-import mozilla.components.browser.icons.DesiredSize
-import mozilla.components.support.base.log.logger.Logger
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import mozilla.components.browser.icons.DesiredSize
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * [IconDecoder] that will use Android's [BitmapFactory] in order to decode the byte data.

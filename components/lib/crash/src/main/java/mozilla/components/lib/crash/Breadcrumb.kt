@@ -5,8 +5,8 @@
 package mozilla.components.lib.crash
 
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
 import java.util.Date
+import kotlinx.android.parcel.Parcelize
 
 /**
  * Represents a single crash breadcrumb.

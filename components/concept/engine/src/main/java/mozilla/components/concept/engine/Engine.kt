@@ -7,10 +7,10 @@ package mozilla.components.concept.engine
 import android.content.Context
 import android.util.AttributeSet
 import androidx.annotation.MainThread
+import java.lang.UnsupportedOperationException
 import mozilla.components.concept.engine.utils.EngineVersion
 import mozilla.components.concept.engine.webextension.WebExtension
 import org.json.JSONObject
-import java.lang.UnsupportedOperationException
 
 /**
  * Entry point for interacting with the engine implementation.

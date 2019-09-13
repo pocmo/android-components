@@ -7,6 +7,9 @@ package mozilla.components.feature.awesomebar.provider
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.VisibleForTesting
+import java.io.IOException
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import mozilla.components.browser.search.SearchEngine
 import mozilla.components.browser.search.SearchEngineManager
 import mozilla.components.browser.search.suggestions.SearchSuggestionClient
@@ -16,9 +19,6 @@ import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.support.base.log.logger.Logger
-import java.io.IOException
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 /**
  * A [AwesomeBar.SuggestionProvider] implementation that provides a suggestion containing search engine suggestions (as

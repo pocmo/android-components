@@ -6,8 +6,8 @@ package mozilla.components.service.glean.storages
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
-import mozilla.components.service.glean.error.ErrorRecording.recordError
 import mozilla.components.service.glean.error.ErrorRecording.ErrorType
+import mozilla.components.service.glean.error.ErrorRecording.recordError
 import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.support.base.log.logger.Logger
 

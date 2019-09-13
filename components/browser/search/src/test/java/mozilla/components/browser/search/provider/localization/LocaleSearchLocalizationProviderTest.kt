@@ -5,13 +5,13 @@
 package mozilla.components.browser.search.provider.localization
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 class LocaleSearchLocalizationProviderTest {

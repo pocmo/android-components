@@ -9,8 +9,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import mozilla.components.service.experiments.Experiments
-import org.mozilla.samples.glean.GleanMetrics.Test
 import org.mozilla.samples.glean.GleanMetrics.BrowserEngagement
+import org.mozilla.samples.glean.GleanMetrics.Test
 import org.mozilla.samples.glean.library.SamplesGleanLibrary
 
 open class MainActivity : AppCompatActivity() {

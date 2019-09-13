@@ -6,10 +6,10 @@ package mozilla.components.service.experiments
 
 import android.annotation.SuppressLint
 import android.content.Context
-import mozilla.components.support.base.log.logger.Logger
-import mozilla.components.service.glean.Glean
 import androidx.annotation.VisibleForTesting
 import java.io.File
+import mozilla.components.service.glean.Glean
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * This is the main experiments API, which is exposed through the global [Experiments] object.

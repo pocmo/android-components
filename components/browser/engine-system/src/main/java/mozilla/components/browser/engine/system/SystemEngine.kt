@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.annotation.VisibleForTesting
+import java.lang.IllegalStateException
 import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
@@ -19,7 +20,6 @@ import mozilla.components.concept.engine.Settings
 import mozilla.components.concept.engine.history.HistoryTrackingDelegate
 import mozilla.components.concept.engine.utils.EngineVersion
 import org.json.JSONObject
-import java.lang.IllegalStateException
 
 /**
  * WebView-based implementation of the Engine interface.

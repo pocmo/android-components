@@ -6,6 +6,8 @@ package mozilla.components.service.glean.net
 
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Header
 import mozilla.components.concept.fetch.MutableHeaders
@@ -13,8 +15,6 @@ import mozilla.components.concept.fetch.Request
 import mozilla.components.concept.fetch.isClientError
 import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.support.base.log.logger.Logger
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * A simple ping Uploader, which implements a "send once" policy, never

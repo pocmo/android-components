@@ -4,13 +4,13 @@
 
 package mozilla.components.feature.awesomebar.provider
 
+import java.util.UUID
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.feature.awesomebar.internal.loadLambda
 import mozilla.components.feature.tabs.TabsUseCases
-import java.util.UUID
 
 /**
  * A [AwesomeBar.SuggestionProvider] implementation that provides suggestions based on the sessions in the

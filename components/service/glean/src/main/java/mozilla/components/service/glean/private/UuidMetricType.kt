@@ -5,9 +5,8 @@
 package mozilla.components.service.glean.private
 
 import androidx.annotation.VisibleForTesting
-import mozilla.components.service.glean.Dispatchers
 import java.util.UUID
-
+import mozilla.components.service.glean.Dispatchers
 import mozilla.components.service.glean.storages.UuidsStorageEngine
 import mozilla.components.support.base.log.logger.Logger
 

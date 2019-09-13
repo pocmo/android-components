@@ -6,6 +6,8 @@ package mozilla.components.browser.engine.system.matcher
 
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.StringReader
+import java.util.HashMap
 import mozilla.components.browser.engine.system.matcher.UrlMatcher.Companion.ADVERTISING
 import mozilla.components.browser.engine.system.matcher.UrlMatcher.Companion.ANALYTICS
 import mozilla.components.browser.engine.system.matcher.UrlMatcher.Companion.CONTENT
@@ -21,8 +23,6 @@ import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.io.StringReader
-import java.util.HashMap
 
 @RunWith(AndroidJUnit4::class)
 class UrlMatcherTest {

@@ -5,6 +5,8 @@
 package mozilla.components.browser.storage.sync
 
 import androidx.annotation.GuardedBy
+import java.io.Closeable
+import java.io.File
 import mozilla.appservices.places.PlacesApi
 import mozilla.appservices.places.PlacesReaderConnection
 import mozilla.appservices.places.PlacesWriterConnection
@@ -15,8 +17,6 @@ import mozilla.components.browser.storage.sync.GleanMetrics.BookmarksSync
 import mozilla.components.browser.storage.sync.GleanMetrics.HistorySync
 import mozilla.components.browser.storage.sync.GleanMetrics.Pings
 import mozilla.components.concept.sync.SyncAuthInfo
-import java.io.Closeable
-import java.io.File
 
 const val DB_NAME = "places.sqlite"
 const val MAX_FAILURE_REASON_LENGTH = 100

@@ -7,6 +7,7 @@
 package mozilla.components.feature.sendtab
 
 import androidx.annotation.VisibleForTesting
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,6 @@ import mozilla.components.concept.sync.DeviceEventOutgoing.SendTab
 import mozilla.components.concept.sync.TabData
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.support.ktx.kotlin.crossProduct
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Contains use cases for sending tabs to devices related to the firefox-accounts.

@@ -5,10 +5,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import org.mozilla.samples.sync.DeviceFragment.OnDeviceListInteractionListener
 import kotlinx.android.synthetic.main.fragment_device.view.*
 import mozilla.components.concept.sync.Device
 import mozilla.components.concept.sync.DeviceType
+import org.mozilla.samples.sync.DeviceFragment.OnDeviceListInteractionListener
 
 /**
  * [RecyclerView.Adapter] that can display a [DummyItem] and makes a call to the

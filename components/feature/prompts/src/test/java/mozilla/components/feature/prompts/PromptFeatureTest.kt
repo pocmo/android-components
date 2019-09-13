@@ -15,6 +15,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.security.InvalidParameterException
+import java.util.Date
+import java.util.UUID
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.engine.Engine
@@ -45,9 +48,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.security.InvalidParameterException
-import java.util.Date
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class PromptFeatureTest {

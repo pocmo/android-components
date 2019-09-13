@@ -6,6 +6,8 @@ package mozilla.components.service.glean.ping
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import mozilla.components.service.glean.BuildConfig
 import mozilla.components.service.glean.private.PingType
 import mozilla.components.service.glean.storages.MockStorageEngine
@@ -22,8 +24,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 
 @RunWith(RobolectricTestRunner::class)
 class PingMakerTest {

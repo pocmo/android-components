@@ -14,11 +14,10 @@ import mozilla.components.service.glean.config.Configuration
 import mozilla.components.service.glean.testing.GleanTestRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.mozilla.samples.glean.GleanMetrics.Test as GleanTestMetrics
-
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.samples.glean.GleanMetrics.Test as GleanTestMetrics
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {

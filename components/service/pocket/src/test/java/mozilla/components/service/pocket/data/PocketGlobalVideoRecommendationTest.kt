@@ -4,9 +4,9 @@
 
 package mozilla.components.service.pocket.data
 
+import kotlin.reflect.KVisibility
 import mozilla.components.service.pocket.helpers.assertConstructorsVisibility
 import org.junit.Test
-import kotlin.reflect.KVisibility
 
 class PocketGlobalVideoRecommendationTest {
 

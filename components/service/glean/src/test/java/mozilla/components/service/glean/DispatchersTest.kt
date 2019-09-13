@@ -5,11 +5,10 @@
 package mozilla.components.service.glean
 
 import kotlinx.coroutines.runBlocking
-import org.junit.Test
-
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
+import org.junit.Test
 
 @Suppress("EXPERIMENTAL_API_USAGE")
 class DispatchersTest {

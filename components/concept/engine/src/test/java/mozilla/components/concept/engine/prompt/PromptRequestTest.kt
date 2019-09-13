@@ -4,6 +4,7 @@
 
 package mozilla.components.concept.engine.prompt
 
+import java.util.Date
 import mozilla.components.concept.engine.prompt.PromptRequest.Alert
 import mozilla.components.concept.engine.prompt.PromptRequest.MenuChoice
 import mozilla.components.concept.engine.prompt.PromptRequest.MultipleChoice
@@ -15,7 +16,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Date
 
 class PromptRequestTest {
 

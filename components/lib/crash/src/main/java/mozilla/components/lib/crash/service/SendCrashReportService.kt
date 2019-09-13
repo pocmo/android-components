@@ -12,6 +12,8 @@ import android.os.IBinder
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -23,8 +25,6 @@ import mozilla.components.lib.crash.notification.CrashNotification
 import mozilla.components.lib.crash.notification.NOTIFICATION_TAG
 import mozilla.components.support.base.ids.NotificationIds
 import mozilla.components.support.base.ids.cancel
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 
 class SendCrashReportService : Service() {
     private val crashReporter: CrashReporter by lazy { CrashReporter.requireInstance }

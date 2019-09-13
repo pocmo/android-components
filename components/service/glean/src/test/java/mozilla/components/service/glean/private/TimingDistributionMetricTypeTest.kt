@@ -5,6 +5,7 @@
 package mozilla.components.service.glean.private
 
 import androidx.test.core.app.ApplicationProvider
+import java.lang.NullPointerException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mozilla.components.service.glean.histogram.FunctionalHistogram
@@ -13,13 +14,12 @@ import mozilla.components.service.glean.testing.GleanTestRule
 import mozilla.components.service.glean.timing.TimingManager
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.lang.NullPointerException
 
 @ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi

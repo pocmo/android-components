@@ -5,15 +5,15 @@
 package mozilla.components.service.glean.net
 
 import androidx.annotation.VisibleForTesting
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
 import mozilla.components.service.glean.BuildConfig
 import mozilla.components.service.glean.config.Configuration
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONException
 import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * The logic for uploading pings: this leaves the actual upload implementation

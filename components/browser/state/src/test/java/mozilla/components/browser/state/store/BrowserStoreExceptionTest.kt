@@ -5,6 +5,7 @@
 package mozilla.components.browser.state.store
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.lang.IllegalArgumentException
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.createTab
@@ -14,7 +15,6 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.shadows.ShadowLooper
-import java.lang.IllegalArgumentException
 
 // These tests are in a separate class because they needs to run with
 // Robolectric (different runner, slower) while all other tests only

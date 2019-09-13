@@ -4,19 +4,19 @@
 
 package mozilla.components.service.sync.logins
 
-import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.plus
 import mozilla.appservices.logins.DatabaseLoginsStorage
 import mozilla.appservices.logins.LoginsStorage
 import mozilla.appservices.logins.MemoryLoginsStorage
+import mozilla.appservices.sync15.SyncTelemetryPing
 import mozilla.components.concept.sync.SyncAuthInfo
 import mozilla.components.concept.sync.SyncStatus
 import mozilla.components.concept.sync.SyncableStore
-import mozilla.appservices.sync15.SyncTelemetryPing
 
 /**
  * This type contains the set of information required to successfully

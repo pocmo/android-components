@@ -5,16 +5,16 @@
 package mozilla.components.service.glean.private
 
 import androidx.test.core.app.ApplicationProvider
+import java.lang.NullPointerException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mozilla.components.service.glean.testing.GleanTestRule
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.lang.NullPointerException
 
 @ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi

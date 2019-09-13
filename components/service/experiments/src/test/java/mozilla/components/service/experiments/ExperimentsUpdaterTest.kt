@@ -11,6 +11,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkerParameters
 import androidx.work.testing.WorkManagerTestInitHelper
+import java.util.concurrent.TimeUnit
 import mozilla.components.support.test.mock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,7 +22,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ExperimentsUpdaterTest {

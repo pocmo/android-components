@@ -12,10 +12,10 @@ import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
+import kotlin.math.max
 import mozilla.components.browser.icons.DesiredSize
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
-import kotlin.math.max
 
 /**
  * [IconProcessor] implementation that builds maskable icons.

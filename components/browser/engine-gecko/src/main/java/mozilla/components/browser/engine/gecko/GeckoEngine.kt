@@ -6,6 +6,7 @@ package mozilla.components.browser.engine.gecko
 
 import android.content.Context
 import android.util.AttributeSet
+import java.lang.IllegalStateException
 import mozilla.components.browser.engine.gecko.integration.LocaleSettingUpdater
 import mozilla.components.browser.engine.gecko.mediaquery.from
 import mozilla.components.browser.engine.gecko.mediaquery.toGeckoValue
@@ -27,7 +28,6 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoWebExecutor
-import java.lang.IllegalStateException
 
 /**
  * Gecko-based implementation of Engine interface.

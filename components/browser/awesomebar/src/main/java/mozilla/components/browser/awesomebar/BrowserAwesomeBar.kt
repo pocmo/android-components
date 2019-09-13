@@ -11,6 +11,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,7 +21,6 @@ import kotlinx.coroutines.withContext
 import mozilla.components.browser.awesomebar.layout.SuggestionLayout
 import mozilla.components.browser.awesomebar.transform.SuggestionTransformer
 import mozilla.components.concept.awesomebar.AwesomeBar
-import java.util.concurrent.Executors
 
 private const val PROVIDER_QUERY_THREADS = 3
 

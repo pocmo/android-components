@@ -1,6 +1,7 @@
 package mozilla.components.browser.session.ext
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.lang.IllegalStateException
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.state.CustomTabConfig
 import mozilla.components.support.test.mock
@@ -8,7 +9,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.lang.IllegalStateException
 
 @RunWith(AndroidJUnit4::class)
 class SessionExtensionsTest {

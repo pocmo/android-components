@@ -10,6 +10,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import java.io.File
+import java.util.UUID
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -26,10 +30,6 @@ import mozilla.components.concept.push.PushService
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import java.io.File
-import java.util.UUID
-import java.util.concurrent.Executors
-import kotlin.coroutines.CoroutineContext
 
 /**
  * A implementation of a [PushProcessor] that should live as a singleton by being installed

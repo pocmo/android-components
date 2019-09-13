@@ -12,9 +12,9 @@ import com.android.tools.lint.detector.api.JavaContext
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
 import com.intellij.psi.PsiMethod
+import java.util.EnumSet
 import org.jetbrains.uast.UCallExpression
 import org.jetbrains.uast.getContainingUClass
-import java.util.EnumSet
 
 internal const val ANDROID_LOG_CLASS = "android.util.Log"
 internal const val ERROR_MESSAGE = "Using Android Log instead of base component"

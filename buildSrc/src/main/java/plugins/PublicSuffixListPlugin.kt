@@ -4,14 +4,14 @@
 
 package plugins
 
+import java.io.File
+import java.util.TreeSet
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString
 import okio.Okio
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import java.io.File
-import java.util.TreeSet
 
 /**
  * Gradle plugin to update the public suffix list used by the `lib-publicsuffixlist` component.

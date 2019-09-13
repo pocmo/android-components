@@ -5,6 +5,7 @@
 package mozilla.components.service.glean
 
 import androidx.annotation.VisibleForTesting
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -12,7 +13,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import mozilla.components.support.base.log.logger.Logger
-import java.util.concurrent.ConcurrentLinkedQueue
 
 @ObsoleteCoroutinesApi
 internal object Dispatchers {

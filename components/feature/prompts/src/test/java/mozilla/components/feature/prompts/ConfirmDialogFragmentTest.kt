@@ -8,8 +8,8 @@ import android.content.DialogInterface
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import mozilla.ext.appCompatContext
 import mozilla.components.support.test.mock
+import mozilla.ext.appCompatContext
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

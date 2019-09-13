@@ -4,13 +4,13 @@
 
 package mozilla.components.browser.state.store
 
+import java.lang.IllegalArgumentException
 import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.reducer.BrowserStateReducer
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Action
 import mozilla.components.lib.state.Store
-import java.lang.IllegalArgumentException
 
 /**
  * The [BrowserStore] holds the [BrowserState] (state tree).

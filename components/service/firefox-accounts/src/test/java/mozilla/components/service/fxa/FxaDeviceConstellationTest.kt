@@ -6,6 +6,7 @@ package mozilla.components.service.fxa
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.setMain
 import mozilla.appservices.fxaclient.AccountEvent
+import mozilla.appservices.fxaclient.Device as NativeDevice
+import mozilla.appservices.fxaclient.FirefoxAccount as NativeFirefoxAccount
 import mozilla.appservices.fxaclient.TabHistoryEntry
 import mozilla.components.concept.sync.ConstellationState
 import mozilla.components.concept.sync.DeviceCapability
@@ -26,15 +29,12 @@ import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.TabData
 import mozilla.components.support.test.mock
 import org.junit.Assert
-import mozilla.appservices.fxaclient.FirefoxAccount as NativeFirefoxAccount
-import mozilla.appservices.fxaclient.Device as NativeDevice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
-import java.util.concurrent.Executors
 
 class FxaDeviceConstellationTest {
     lateinit var account: NativeFirefoxAccount

@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.NONE
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.components.Build
@@ -20,8 +22,6 @@ import mozilla.components.concept.fetch.isSuccess
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 private const val GEOIP_SERVICE_URL = "https://location.services.mozilla.com/v1/"
 private const val CONNECT_TIMEOUT_SECONDS = 10L

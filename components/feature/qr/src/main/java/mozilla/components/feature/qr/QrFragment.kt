@@ -48,8 +48,6 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
-import mozilla.components.support.base.android.view.AutoFitTextureView
-import mozilla.components.support.base.log.logger.Logger
 import java.io.Serializable
 import java.util.ArrayList
 import java.util.Arrays
@@ -59,6 +57,8 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 import kotlin.math.min
+import mozilla.components.support.base.android.view.AutoFitTextureView
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * A [Fragment] that displays a QR scanner.

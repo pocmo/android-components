@@ -4,10 +4,10 @@
 
 package mozilla.components.service.location.search
 
+import java.util.Locale
 import mozilla.components.browser.search.provider.localization.SearchLocalization
 import mozilla.components.browser.search.provider.localization.SearchLocalizationProvider
 import mozilla.components.service.location.MozillaLocationService
-import java.util.Locale
 
 /**
  * [SearchLocalizationProvider] implementation that uses a [MozillaLocationService] instance to

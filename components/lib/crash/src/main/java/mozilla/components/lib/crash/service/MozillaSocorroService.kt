@@ -5,9 +5,9 @@
 package mozilla.components.lib.crash.service
 
 import android.content.Context
+import java.io.File
 import mozilla.components.lib.crash.Crash
 import org.mozilla.geckoview.CrashReporter
-import java.io.File
 
 typealias GeckoCrashReporter = CrashReporter
 

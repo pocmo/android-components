@@ -6,6 +6,7 @@ package mozilla.components.browser.icons.utils
 
 import android.graphics.Bitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.OutputStream
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.concept.engine.manifest.Size
 import mozilla.components.support.test.any
@@ -17,7 +18,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mockito.`when`
-import java.io.OutputStream
 
 @RunWith(AndroidJUnit4::class)
 class IconDiskCacheTest {

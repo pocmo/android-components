@@ -5,12 +5,12 @@
 package mozilla.components.service.fretboard.storage.flatfile
 
 import android.util.AtomicFile
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
 import mozilla.components.service.fretboard.ExperimentStorage
 import mozilla.components.service.fretboard.ExperimentsSnapshot
 import org.json.JSONException
-import java.io.FileNotFoundException
-import java.io.File
-import java.io.IOException
 
 /**
  * Class which uses a flat JSON file as an experiment storage mechanism

@@ -5,11 +5,11 @@
 package mozilla.components.browser.domains
 
 import android.content.Context
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
-import java.util.Locale
+import kotlinx.coroutines.launch
 
 /**
  * Provides autocomplete functionality for domains, based on a provided list

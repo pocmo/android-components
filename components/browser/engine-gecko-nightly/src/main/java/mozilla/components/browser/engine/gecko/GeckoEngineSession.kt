@@ -5,6 +5,7 @@
 package mozilla.components.browser.engine.gecko
 
 import android.annotation.SuppressLint
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,7 +40,6 @@ import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSession.NavigationDelegate
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.WebRequestError
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Gecko-based EngineSession implementation.

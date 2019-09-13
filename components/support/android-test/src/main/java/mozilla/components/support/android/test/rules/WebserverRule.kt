@@ -7,13 +7,13 @@ package mozilla.components.support.android.test.rules
 import android.os.Handler
 import android.os.Looper
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.IOException
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
-import java.io.IOException
 
 /**
  * A [TestWatcher] junit rule that will serve content from assets in the test package.

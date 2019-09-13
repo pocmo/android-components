@@ -5,13 +5,13 @@
 package mozilla.components.browser.session.storage
 
 import androidx.annotation.VisibleForTesting
+import java.util.UUID
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.concept.engine.Engine
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.util.UUID
 
 // Current version of the format used.
 private const val VERSION = 1

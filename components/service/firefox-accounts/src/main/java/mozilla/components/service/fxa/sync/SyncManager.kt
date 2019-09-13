@@ -4,15 +4,15 @@
 
 package mozilla.components.service.fxa.sync
 
+import java.io.Closeable
+import java.lang.Exception
+import java.util.concurrent.TimeUnit
 import mozilla.components.concept.sync.SyncableStore
 import mozilla.components.service.fxa.SyncConfig
 import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import java.io.Closeable
-import java.lang.Exception
-import java.util.concurrent.TimeUnit
 
 /**
  * An interface for consumers that wish to observer "sync lifecycle" events.

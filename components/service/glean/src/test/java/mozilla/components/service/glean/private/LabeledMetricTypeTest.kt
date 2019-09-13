@@ -7,6 +7,7 @@ package mozilla.components.service.glean.private
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import java.util.UUID
 import mozilla.components.service.glean.GleanMetrics.Pings
 import mozilla.components.service.glean.collectAndCheckPingSchema
 import mozilla.components.service.glean.error.ErrorRecording
@@ -32,7 +33,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.robolectric.RobolectricTestRunner
-import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 class LabeledMetricTypeTest {

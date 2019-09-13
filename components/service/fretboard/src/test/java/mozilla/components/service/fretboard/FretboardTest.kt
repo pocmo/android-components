@@ -9,6 +9,9 @@ import android.content.SharedPreferences
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.File
+import kotlin.reflect.full.functions
+import kotlin.reflect.jvm.isAccessible
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import mozilla.components.service.fretboard.storage.flatfile.FlatFileExperimentStorage
@@ -27,9 +30,6 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.io.File
-import kotlin.reflect.full.functions
-import kotlin.reflect.jvm.isAccessible
 
 @RunWith(AndroidJUnit4::class)
 class FretboardTest {

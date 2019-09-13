@@ -14,6 +14,8 @@ import android.widget.DatePicker
 import android.widget.NumberPicker
 import android.widget.TimePicker
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Calendar
+import java.util.Date
 import mozilla.components.feature.prompts.TimePickerDialogFragment.Companion.SELECTION_TYPE_DATE_AND_TIME
 import mozilla.components.feature.prompts.TimePickerDialogFragment.Companion.SELECTION_TYPE_MONTH
 import mozilla.components.feature.prompts.TimePickerDialogFragment.Companion.SELECTION_TYPE_TIME
@@ -34,8 +36,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.robolectric.annotation.Config
-import java.util.Calendar
-import java.util.Date
 
 @RunWith(AndroidJUnit4::class)
 class TimePickerDialogFragmentTest {

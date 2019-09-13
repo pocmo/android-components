@@ -5,13 +5,13 @@
 package mozilla.components.service.glean.histogram
 
 import androidx.test.core.app.ApplicationProvider
+import java.lang.Math.pow
 import mozilla.components.service.glean.testing.GleanTestRule
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.lang.Math.pow
 
 @RunWith(RobolectricTestRunner::class)
 class FunctionalHistogramTest {

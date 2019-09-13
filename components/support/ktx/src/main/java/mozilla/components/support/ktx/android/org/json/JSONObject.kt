@@ -4,8 +4,8 @@
 
 package mozilla.components.support.ktx.android.org.json
 
-import org.json.JSONObject
 import java.util.TreeMap
+import org.json.JSONObject
 
 /**
  * Returns the value mapped by {@code key} if it exists, and

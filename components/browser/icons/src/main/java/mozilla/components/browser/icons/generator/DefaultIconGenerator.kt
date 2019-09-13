@@ -18,11 +18,11 @@ import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import androidx.annotation.DimenRes
 import androidx.core.content.ContextCompat
+import kotlin.math.abs
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.browser.icons.R
 import mozilla.components.support.ktx.android.net.hostWithoutCommonPrefixes
-import kotlin.math.abs
 
 /**
  * [IconGenerator] implementation that will generate an icon with a background color, rounded corners and a letter

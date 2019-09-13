@@ -4,15 +4,15 @@
 
 package mozilla.components.browser.engine.gecko
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.launch
-import org.mozilla.geckoview.GeckoResult
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import org.mozilla.geckoview.GeckoResult
 
 /**
  * Wait for a GeckoResult to be complete in a co-routine.

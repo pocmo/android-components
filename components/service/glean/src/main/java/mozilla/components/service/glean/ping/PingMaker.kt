@@ -9,8 +9,8 @@ import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import mozilla.components.service.glean.BuildConfig
 import mozilla.components.service.glean.private.PingType
-import mozilla.components.service.glean.storages.StorageEngineManager
 import mozilla.components.service.glean.storages.ExperimentsStorageEngine
+import mozilla.components.service.glean.storages.StorageEngineManager
 import mozilla.components.service.glean.utils.getISOTimeString
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.org.json.mergeWith

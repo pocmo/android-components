@@ -4,13 +4,13 @@
 
 package mozilla.components.feature.awesomebar.provider
 
+import java.util.UUID
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.storage.HistoryStorage
 import mozilla.components.concept.storage.SearchResult
 import mozilla.components.feature.awesomebar.internal.loadLambda
 import mozilla.components.feature.session.SessionUseCases
-import java.util.UUID
 
 internal const val HISTORY_SUGGESTION_LIMIT = 20
 

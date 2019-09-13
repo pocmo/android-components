@@ -4,10 +4,10 @@
 
 package mozilla.components.service.glean.private
 
-import mozilla.components.service.glean.storages.StorageEngine
-import mozilla.components.service.glean.storages.StorageEngineManager
 import mozilla.components.service.glean.error.ErrorRecording.ErrorType
 import mozilla.components.service.glean.error.ErrorRecording.recordError
+import mozilla.components.service.glean.storages.StorageEngine
+import mozilla.components.service.glean.storages.StorageEngineManager
 import mozilla.components.support.base.log.logger.Logger
 
 /**

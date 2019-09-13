@@ -6,6 +6,7 @@ package mozilla.components.feature.media.state
 
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -19,7 +20,6 @@ import mozilla.components.concept.engine.media.Media
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import kotlin.coroutines.EmptyCoroutineContext
 
 private const val DELAY_STATE_UPDATE_MS = 100L
 

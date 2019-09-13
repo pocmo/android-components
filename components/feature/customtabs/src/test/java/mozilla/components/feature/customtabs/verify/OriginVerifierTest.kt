@@ -9,6 +9,7 @@ import androidx.browser.customtabs.CustomTabsService.RELATION_HANDLE_ALL_URLS
 import androidx.browser.customtabs.CustomTabsService.RELATION_USE_AS_ORIGIN
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import mozilla.components.concept.fetch.Client
@@ -27,7 +28,6 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations.initMocks
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 @ExperimentalCoroutinesApi

@@ -4,8 +4,8 @@
 
 package mozilla.components.support.test
 
-import org.junit.Assert.fail
 import kotlin.reflect.KClass
+import org.junit.Assert.fail
 
 /**
  * Expect [block] to throw an exception. Otherwise fail the test (junit).

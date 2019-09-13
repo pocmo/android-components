@@ -15,10 +15,10 @@ import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.view.isVisible
 import mozilla.components.browser.toolbar.R
 import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection
+import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection.OFF_FOR_A_SITE
 import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection.OFF_GLOBALLY
 import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection.ON_NO_TRACKERS_BLOCKED
 import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection.ON_TRACKERS_BLOCKED
-import mozilla.components.concept.toolbar.Toolbar.SiteTrackingProtection.OFF_FOR_A_SITE
 
 /**
  * Internal widget to display the different icons of tracking protection, relies on the

@@ -5,6 +5,8 @@
 package mozilla.components.service.fretboard.source.kinto
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.Calendar
+import java.util.Date
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.service.fretboard.Experiment
 import mozilla.components.service.fretboard.ExperimentDownloadException
@@ -19,8 +21,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Calendar
-import java.util.Date
 
 @RunWith(AndroidJUnit4::class)
 class SignatureVerifierTest {

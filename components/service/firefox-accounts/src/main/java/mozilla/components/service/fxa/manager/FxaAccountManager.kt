@@ -8,19 +8,26 @@ import android.content.Context
 import androidx.annotation.GuardedBy
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.LifecycleOwner
+import java.io.Closeable
+import java.lang.Exception
+import java.lang.IllegalArgumentException
+import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import mozilla.components.concept.sync.AccountObserver
 import mozilla.components.concept.sync.AuthException
-import mozilla.components.concept.sync.DeviceCapability
 import mozilla.components.concept.sync.AuthFlowUrl
 import mozilla.components.concept.sync.AuthType
+import mozilla.components.concept.sync.DeviceCapability
 import mozilla.components.concept.sync.DeviceEvent
 import mozilla.components.concept.sync.DeviceEventsObserver
 import mozilla.components.concept.sync.OAuthAccount
@@ -46,13 +53,6 @@ import mozilla.components.service.fxa.sync.WorkManagerSyncManager
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import java.io.Closeable
-import java.lang.Exception
-import java.lang.IllegalArgumentException
-import java.lang.ref.WeakReference
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import kotlin.coroutines.CoroutineContext
 
 /**
  * A global registry for propagating [AuthException] errors. Components such as [SyncManager] and

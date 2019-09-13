@@ -9,6 +9,12 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.annotation.VisibleForTesting
+import java.io.FileOutputStream
+import java.io.IOException
+import java.security.InvalidParameterException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import mozilla.components.browser.engine.gecko.GeckoEngineSession
 import mozilla.components.concept.engine.prompt.Choice
 import mozilla.components.concept.engine.prompt.PromptRequest
@@ -49,12 +55,6 @@ import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_TIME
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.DATETIME_TYPE_WEEK
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.FileCallback
 import org.mozilla.geckoview.GeckoSession.PromptDelegate.TextCallback
-import java.io.FileOutputStream
-import java.io.IOException
-import java.security.InvalidParameterException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 typealias GeckoChoice = GeckoSession.PromptDelegate.Choice
 

@@ -6,6 +6,8 @@ package mozilla.components.service.pocket
 
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.io.IOException
+import java.net.URLEncoder
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Headers.Names.CONTENT_TYPE
 import mozilla.components.concept.fetch.Headers.Names.USER_AGENT
@@ -26,8 +28,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
-import java.io.IOException
-import java.net.URLEncoder
 
 private const val EXPECTED_USER_AGENT = "Mozilla/5.0 (Expected-User-Agent 4.0) Gecko WebKit-like. Isn't this clear?"
 private const val EXPECTED_ACCESS_TOKEN = "12345" // Amazing, that's the same combination on my luggage!

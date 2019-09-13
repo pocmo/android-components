@@ -10,6 +10,8 @@ import android.content.pm.PackageManager.PERMISSION_GRANTED
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.security.InvalidParameterException
+import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
@@ -44,8 +46,6 @@ import org.mockito.Mockito.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.security.InvalidParameterException
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class SitePermissionsFeatureTest {

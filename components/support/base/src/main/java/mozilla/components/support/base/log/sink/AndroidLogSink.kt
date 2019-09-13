@@ -5,9 +5,9 @@
 package mozilla.components.support.base.log.sink
 
 import android.os.Build
-import mozilla.components.support.base.log.Log
 import java.io.PrintWriter
 import java.io.StringWriter
+import mozilla.components.support.base.log.Log
 
 private const val MAX_TAG_LENGTH = 23
 private const val STACK_TRACE_INITIAL_BUFFER_SIZE = 256

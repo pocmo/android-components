@@ -5,14 +5,14 @@
 package mozilla.components.browser.session
 
 import androidx.annotation.GuardedBy
+import kotlin.math.max
+import kotlin.math.min
 import mozilla.components.browser.session.engine.EngineObserver
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * This class provides access to a centralized registry of all active sessions.

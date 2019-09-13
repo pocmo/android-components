@@ -6,11 +6,11 @@ package mozilla.components.lib.crash.service
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import java.io.File
 import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.GleanMetrics.CrashMetrics
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.content.isMainProcess
-import java.io.File
 
 /**
  * A [CrashReporterService] implementation for recording metrics with Glean.  The purpose of this

@@ -11,10 +11,10 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import mozilla.components.feature.intent.ext.getSessionId
 import mozilla.components.browser.tabstray.BrowserTabsTray
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.tabstray.TabsTray
+import mozilla.components.feature.intent.ext.getSessionId
 import mozilla.components.support.base.feature.BackHandler
 import mozilla.components.support.utils.SafeIntent
 import org.mozilla.samples.browser.ext.components

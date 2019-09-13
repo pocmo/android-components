@@ -5,14 +5,14 @@
 package org.mozilla.samples.glean
 
 import android.app.Application
-import mozilla.components.service.glean.Glean
 import mozilla.components.service.experiments.Experiments
+import mozilla.components.service.glean.Glean
 import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.sink.AndroidLogSink
 import org.mozilla.samples.glean.GleanMetrics.Basic
-import org.mozilla.samples.glean.GleanMetrics.Test
 import org.mozilla.samples.glean.GleanMetrics.Custom
 import org.mozilla.samples.glean.GleanMetrics.Pings
+import org.mozilla.samples.glean.GleanMetrics.Test
 
 class GleanApplication : Application() {
 

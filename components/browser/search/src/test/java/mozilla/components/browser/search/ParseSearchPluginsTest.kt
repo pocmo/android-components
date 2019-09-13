@@ -5,6 +5,9 @@
 package mozilla.components.browser.search
 
 import android.text.TextUtils
+import java.io.File
+import java.io.FileInputStream
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -12,9 +15,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
-import java.io.File
-import java.io.FileInputStream
-import java.util.UUID
 
 @RunWith(ParameterizedRobolectricTestRunner::class)
 class ParseSearchPluginsTest(private val searchEngineIdentifier: String) {

@@ -6,6 +6,7 @@ package mozilla.components.service.glean.storages
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import java.util.UUID
 import mozilla.components.service.glean.private.Lifetime
 import mozilla.components.service.glean.private.UuidMetricType
 import org.junit.Assert.assertEquals
@@ -18,7 +19,6 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
-import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 class UuidsStorageEngineTest {

@@ -5,6 +5,7 @@ package mozilla.components.service.glean.storages
 
 import android.os.SystemClock
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.TimeUnit
 import mozilla.components.service.glean.Glean
 import mozilla.components.service.glean.checkPingSchema
 import mozilla.components.service.glean.error.ErrorRecording.ErrorType
@@ -27,7 +28,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.util.concurrent.TimeUnit
 
 // Declared here, since Kotlin can not declare nested enum classes
 enum class ExtraKeys {

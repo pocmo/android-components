@@ -8,6 +8,8 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Transformations
 import androidx.paging.DataSource
+import java.io.File
+import java.util.UUID
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.ext.writeSnapshotItem
@@ -17,8 +19,6 @@ import mozilla.components.feature.tab.collections.db.TabCollectionDatabase
 import mozilla.components.feature.tab.collections.db.TabCollectionEntity
 import mozilla.components.feature.tab.collections.db.TabEntity
 import mozilla.components.support.ktx.java.io.truncateDirectory
-import java.io.File
-import java.util.UUID
 
 /**
  * A storage implementation that saves snapshots of tabs / sessions in named collections.

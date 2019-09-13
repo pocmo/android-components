@@ -20,6 +20,10 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.state.content.DownloadState
@@ -35,10 +39,6 @@ import mozilla.components.feature.downloads.ext.getDownloadExtra
 import mozilla.components.feature.downloads.ext.withResponse
 import mozilla.components.support.base.ids.NotificationIds
 import mozilla.components.support.base.ids.notify
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.OutputStream
 
 /**
  * Service that performs downloads through a fetch [Client] rather than through the native

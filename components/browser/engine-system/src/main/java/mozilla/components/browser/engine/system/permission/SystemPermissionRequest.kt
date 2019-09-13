@@ -4,11 +4,11 @@
 
 package mozilla.components.browser.engine.system.permission
 
+import android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
+import android.webkit.PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID
+import android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE
 import mozilla.components.concept.engine.permission.Permission
 import mozilla.components.concept.engine.permission.PermissionRequest
-import android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
-import android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE
-import android.webkit.PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID
 
 /**
  * WebView-based implementation of [PermissionRequest].

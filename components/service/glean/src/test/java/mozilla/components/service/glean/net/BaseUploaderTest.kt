@@ -4,6 +4,8 @@
 
 package mozilla.components.service.glean.net
 
+import java.util.Calendar
+import java.util.TimeZone
 import mozilla.components.service.glean.BuildConfig
 import mozilla.components.service.glean.config.Configuration
 import mozilla.components.support.test.any
@@ -16,8 +18,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
-import java.util.Calendar
-import java.util.TimeZone
 
 @RunWith(RobolectricTestRunner::class)
 class BaseUploaderTest {

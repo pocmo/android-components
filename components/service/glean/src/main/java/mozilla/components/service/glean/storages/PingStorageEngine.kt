@@ -6,14 +6,6 @@ package mozilla.components.service.glean.storages
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.Dispatchers as KotlinDispatchers
-import kotlinx.coroutines.launch
-import mozilla.components.service.glean.Glean
-import mozilla.components.service.glean.config.Configuration
-import mozilla.components.service.glean.utils.ensureDirectoryExists
-import mozilla.components.support.base.log.logger.Logger
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileNotFoundException
@@ -21,6 +13,14 @@ import java.io.FileOutputStream
 import java.io.FileReader
 import java.io.IOException
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers as KotlinDispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import mozilla.components.service.glean.Glean
+import mozilla.components.service.glean.config.Configuration
+import mozilla.components.service.glean.utils.ensureDirectoryExists
+import mozilla.components.support.base.log.logger.Logger
 
 /**
  * This class implementation stores pings as files on disk by serializing the upload path and the

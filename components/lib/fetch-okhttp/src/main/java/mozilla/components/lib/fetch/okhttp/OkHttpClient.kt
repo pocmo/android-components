@@ -5,6 +5,8 @@
 package mozilla.components.lib.fetch.okhttp
 
 import android.content.Context
+import java.net.CookieHandler
+import java.net.CookieManager
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.Headers
 import mozilla.components.concept.fetch.MutableHeaders
@@ -17,8 +19,6 @@ import okhttp3.CacheControl
 import okhttp3.JavaNetCookieJar
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
-import java.net.CookieHandler
-import java.net.CookieManager
 
 typealias RequestBuilder = okhttp3.Request.Builder
 

@@ -4,10 +4,10 @@
 
 package mozilla.components.service.glean.histogram
 
-import mozilla.components.support.ktx.android.org.json.tryGetLong
-import org.json.JSONObject
 import java.lang.Math.pow
 import kotlin.math.log
+import mozilla.components.support.ktx.android.org.json.tryGetLong
+import org.json.JSONObject
 
 /**
  * This class represents a histogram where the bucketing is performed by a

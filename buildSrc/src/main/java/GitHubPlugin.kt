@@ -3,10 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import groovy.json.JsonSlurper
+import java.util.Properties
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.task
-import java.util.Properties
 
 open class GitHubPlugin : Plugin<Project> {
 

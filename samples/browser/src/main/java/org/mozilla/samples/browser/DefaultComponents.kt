@@ -6,6 +6,7 @@ package org.mozilla.samples.browser
 
 import android.content.Context
 import android.widget.Toast
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -46,7 +47,6 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import org.mozilla.samples.browser.integration.FindInPageIntegration
 import org.mozilla.samples.browser.request.SampleRequestInterceptor
-import java.util.concurrent.TimeUnit
 
 open class DefaultComponents(private val applicationContext: Context) {
 

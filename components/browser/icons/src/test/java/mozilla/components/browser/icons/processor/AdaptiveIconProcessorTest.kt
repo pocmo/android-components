@@ -7,6 +7,7 @@ package mozilla.components.browser.icons.processor
 import android.os.Build
 import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlin.reflect.jvm.javaField
 import mozilla.components.browser.icons.Icon
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.browser.icons.IconRequest.Resource.Type.MANIFEST_ICON
@@ -20,7 +21,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.robolectric.util.ReflectionHelpers.setStaticField
-import kotlin.reflect.jvm.javaField
 
 @RunWith(AndroidJUnit4::class)
 class AdaptiveIconProcessorTest {

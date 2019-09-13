@@ -5,10 +5,10 @@
 package mozilla.components.browser.search.suggestions
 
 import android.content.Context
+import java.io.IOException
 import mozilla.components.browser.search.SearchEngine
 import mozilla.components.browser.search.SearchEngineManager
 import org.json.JSONException
-import java.io.IOException
 
 /**
  * Async function responsible for taking a URL and returning the results

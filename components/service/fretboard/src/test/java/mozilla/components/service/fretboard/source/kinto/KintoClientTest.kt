@@ -4,6 +4,7 @@
 
 package mozilla.components.service.fretboard.source.kinto
 
+import java.io.IOException
 import mozilla.components.concept.fetch.Client
 import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Response
@@ -17,7 +18,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
-import java.io.IOException
 
 class KintoClientTest {
     private val baseUrl = "http://example.test"

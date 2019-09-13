@@ -10,7 +10,6 @@ import mozilla.components.service.glean.histogram.FunctionalHistogram
 import mozilla.components.service.glean.private.CommonMetricData
 import mozilla.components.service.glean.private.MemoryUnit
 import mozilla.components.service.glean.utils.memoryToBytes
-
 import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONObject
 

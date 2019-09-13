@@ -5,6 +5,8 @@
 package mozilla.components.service.glean.private
 
 import androidx.test.core.app.ApplicationProvider
+import java.util.Calendar
+import java.util.TimeZone
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import mozilla.components.service.glean.testing.GleanTestRule
@@ -15,8 +17,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.util.Calendar
-import java.util.TimeZone
 
 @ObsoleteCoroutinesApi
 @ExperimentalCoroutinesApi

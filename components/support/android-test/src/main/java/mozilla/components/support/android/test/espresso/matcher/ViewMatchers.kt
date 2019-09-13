@@ -5,14 +5,14 @@
 package mozilla.components.support.android.test.espresso.matcher
 
 import android.view.View
-import mozilla.components.support.android.test.Matchers.maybeInvertMatcher
-import org.hamcrest.CoreMatchers.not
-import org.hamcrest.Matcher
 import androidx.test.espresso.matcher.ViewMatchers.hasFocus as espressoHasFocus
 import androidx.test.espresso.matcher.ViewMatchers.isChecked as espressoIsChecked
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed as espressoIsDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.isEnabled as espressoIsEnabled
 import androidx.test.espresso.matcher.ViewMatchers.isSelected as espressoIsSelected
+import mozilla.components.support.android.test.Matchers.maybeInvertMatcher
+import org.hamcrest.CoreMatchers.not
+import org.hamcrest.Matcher
 
 // These functions are defined at the top-level so they appear in autocomplete, like the static methods on
 // Android's [ViewMatchers] class.

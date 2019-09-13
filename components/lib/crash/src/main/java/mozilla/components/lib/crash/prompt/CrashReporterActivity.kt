@@ -11,6 +11,8 @@ import android.view.View
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
 import androidx.appcompat.app.AppCompatActivity
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.android.synthetic.main.mozac_lib_crash_crashreporter.closeButton
 import kotlinx.android.synthetic.main.mozac_lib_crash_crashreporter.messageView
 import kotlinx.android.synthetic.main.mozac_lib_crash_crashreporter.restartButton
@@ -23,8 +25,6 @@ import kotlinx.coroutines.withContext
 import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.CrashReporter
 import mozilla.components.lib.crash.R
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Activity showing the crash reporter prompt asking the user for confirmation before submitting a crash report.

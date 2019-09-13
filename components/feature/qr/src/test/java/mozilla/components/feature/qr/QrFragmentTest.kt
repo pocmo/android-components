@@ -16,6 +16,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
+import java.nio.ByteBuffer
 import mozilla.components.support.base.android.view.AutoFitTextureView
 import mozilla.components.support.test.any
 import mozilla.components.support.test.argumentCaptor
@@ -36,7 +37,6 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.nio.ByteBuffer
 
 @RunWith(AndroidJUnit4::class)
 class QrFragmentTest {

@@ -9,6 +9,8 @@ import android.content.SharedPreferences
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlin.reflect.full.functions
+import kotlin.reflect.jvm.isAccessible
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
 import org.junit.Assert
@@ -23,8 +25,6 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
-import kotlin.reflect.full.functions
-import kotlin.reflect.jvm.isAccessible
 
 @RunWith(AndroidJUnit4::class)
 class ExperimentEvaluatorTest {

@@ -7,6 +7,7 @@ package mozilla.components.concept.toolbar
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.UUID
 import mozilla.components.support.base.android.Padding
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
@@ -16,7 +17,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class ActionToggleButtonTest {

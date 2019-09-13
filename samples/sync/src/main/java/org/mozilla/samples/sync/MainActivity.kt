@@ -9,8 +9,10 @@ import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
-import kotlinx.android.synthetic.main.activity_main.syncStatus
 import androidx.appcompat.app.AppCompatActivity
+import java.lang.Exception
+import kotlin.coroutines.CoroutineContext
+import kotlinx.android.synthetic.main.activity_main.syncStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,26 +28,24 @@ import mozilla.components.concept.sync.DeviceCapability
 import mozilla.components.concept.sync.DeviceConstellationObserver
 import mozilla.components.concept.sync.DeviceEvent
 import mozilla.components.concept.sync.DeviceEventOutgoing
-import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.DeviceEventsObserver
+import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
-import mozilla.components.service.fxa.manager.FxaAccountManager
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.service.fxa.DeviceConfig
+import mozilla.components.service.fxa.FxaAuthData
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.SyncConfig
+import mozilla.components.service.fxa.SyncEngine
+import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.fxa.sync.SyncStatusObserver
-import mozilla.components.support.base.log.Log
-import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
-import mozilla.components.service.fxa.FxaAuthData
-import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.toAuthType
+import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.sink.AndroidLogSink
 import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.support.rustlog.RustLog
-import java.lang.Exception
-import kotlin.coroutines.CoroutineContext
 
 class MainActivity :
         AppCompatActivity(),

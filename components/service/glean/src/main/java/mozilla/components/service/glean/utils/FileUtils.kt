@@ -4,8 +4,8 @@
 
 package mozilla.components.service.glean.utils
 
-import mozilla.components.support.base.log.logger.Logger
 import java.io.File
+import mozilla.components.support.base.log.logger.Logger
 
 private val logger: Logger = Logger("glean/FileUtils")
 
