@@ -46,6 +46,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 import org.robolectric.shadows.ShadowToast
+import java.io.InputStream
 
 @RunWith(AndroidJUnit4::class)
 class DownloadsFeatureTest {
@@ -166,7 +167,7 @@ class DownloadsFeatureTest {
         val feature = DownloadsFeature(
             testContext,
             store,
-            useCases = mock(),
+            useCases = DownloadsUseCases(store),
             fragmentManager = fragmentManager,
             downloadManager = downloadManager
         )
@@ -187,6 +188,8 @@ class DownloadsFeatureTest {
 
         verify(fragmentManager, never()).beginTransaction()
         verify(downloadManager).download(eq(download), anyString())
+
+        assertNull(store.state.findTab("test-tab")!!.content.download)
     }
 
     @Test
