@@ -6,11 +6,13 @@ import static org.gradle.api.tasks.testing.TestResult.ResultType
 
 buildscript {
     repositories {
+        maven { url "http://storage.googleapis.com/r8-releases/raw/master"}
         google()
         jcenter()
     }
 
     dependencies {
+        classpath "com.android.tools:r8:ceaee94e172c6c057cc05e646f5324853fc5d4c5"
         classpath Dependencies.tools_androidgradle
         classpath Dependencies.tools_kotlingradle
         classpath Dependencies.tools_dokka
