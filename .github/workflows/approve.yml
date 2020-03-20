@@ -1,0 +1,16 @@
+name: Auto-Approve MickeyMoz PRs
+
+on: [pull_request]
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/bin/filter@master
+    - name: Filter by MickeyMoz
+    - args: MickeyMoz
+  approve:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hmarr/auto-approve-action@master
+    - name: Auto-Approve
