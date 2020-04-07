@@ -4,6 +4,7 @@
 
 package mozilla.components.browser.session.engine
 
+import android.util.Log
 import mozilla.components.browser.state.action.MediaAction
 import mozilla.components.browser.state.state.MediaState
 import mozilla.components.browser.state.store.BrowserStore
@@ -39,6 +40,16 @@ internal class MediaObserver(
             tabId,
             element.id,
             metadata
+        ))
+    }
+
+    override fun onVolumeChanged(media: Media, volume: Media.Volume) {
+        Log.e("SKDBG", "onVolumeChanged(${element.id}, $volume)")
+
+        store.dispatch(MediaAction.UpdateMediaVolumeAction(
+                tabId,
+                element.id,
+                volume
         ))
     }
 }

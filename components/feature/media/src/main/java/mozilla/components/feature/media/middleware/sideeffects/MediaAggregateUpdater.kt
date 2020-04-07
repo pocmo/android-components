@@ -4,6 +4,7 @@
 
 package mozilla.components.feature.media.middleware.sideeffects
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +19,7 @@ import mozilla.components.feature.media.ext.findPlayingSession
 import mozilla.components.feature.media.ext.getPausedMedia
 import mozilla.components.feature.media.ext.getPlayingMediaIdsForTab
 import mozilla.components.feature.media.ext.hasMediaWithSufficientLongDuration
+import mozilla.components.feature.media.ext.hasMediaWithAudibleAudio
 import mozilla.components.lib.state.MiddlewareStore
 import mozilla.components.support.base.coroutines.Dispatchers
 
@@ -30,8 +32,11 @@ internal class MediaAggregateUpdater(
     internal var updateAggregateJob: Job? = null
 
     fun process(store: MiddlewareStore<BrowserState, BrowserAction>) {
+        Log.w("SKDBG", "Process()")
         val aggregate = aggregateNewState(store.state.media)
         if (aggregate != store.state.media.aggregate) {
+            Log.w("SKDBG", "-> Updating from ${store.state.media.aggregate.state} to ${aggregate.state}")
+
             // We delay updating the state here and cancel previous jobs in order to batch multiple
             // state changes together before updating the state. In addition to reducing the work load
             // this also allows us to treat multiple pause events as a single pause event that we can
@@ -53,6 +58,7 @@ internal class MediaAggregateUpdater(
         if (mediaState.aggregate.state == MediaState.State.PLAYING) {
             val media = mediaState.getPlayingMediaIdsForTab(mediaState.aggregate.activeTabId)
             if (media.isNotEmpty()) {
+                Log.e("SKDBG", "  - playing -> playing")
                 return MediaState.Aggregate(MediaState.State.PLAYING, mediaState.aggregate.activeTabId, media)
             }
         }
@@ -62,11 +68,13 @@ internal class MediaAggregateUpdater(
         if (playingSession != null) {
             val (session, media) = playingSession
             // We only switch to playing state if there's media playing that has a sufficient long
-            // duration. Otherwise we let just Gecko play it and do not request audio focus or show
+            // duration and audio. Otherwise we let just Gecko play it and do not request audio focus or show
             // a media notification. This will let us ignore short audio effects (Beeep!).
-            return if (media.hasMediaWithSufficientLongDuration()) {
+            return if (media.hasMediaWithSufficientLongDuration() && media.hasMediaWithAudibleAudio()) {
+                Log.e("SKDBG", "  - ? -> playing (audible audio: ${media.hasMediaWithAudibleAudio()})")
                 MediaState.Aggregate(MediaState.State.PLAYING, session, media.map { it.id })
             } else {
+                Log.e("SKDBG", "  - ? -> not sufficient for playing")
                 MediaState.Aggregate(MediaState.State.NONE)
             }
         }
@@ -84,6 +92,7 @@ internal class MediaAggregateUpdater(
                 .map { it.id }
 
             if (media.isNotEmpty()) {
+                Log.e("SKDBG", "  - playing -> paused")
                 return MediaState.Aggregate(
                     MediaState.State.PAUSED,
                     mediaState.aggregate.activeTabId,
@@ -98,6 +107,7 @@ internal class MediaAggregateUpdater(
         if (mediaState.aggregate.state == MediaState.State.PAUSED) {
             val media = mediaState.getPausedMedia(mediaState.aggregate.activeTabId)
             if (media.isNotEmpty()) {
+                Log.e("SKDBG", "  - paused -> paused")
                 return MediaState.Aggregate(
                     MediaState.State.PAUSED,
                     mediaState.aggregate.activeTabId,
@@ -106,6 +116,7 @@ internal class MediaAggregateUpdater(
             }
         }
 
+        Log.e("SKDBG", "  - * -> none")
         return MediaState.Aggregate(MediaState.State.NONE)
     }
 }

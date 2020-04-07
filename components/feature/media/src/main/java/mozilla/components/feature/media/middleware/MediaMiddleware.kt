@@ -5,6 +5,7 @@
 package mozilla.components.feature.media.middleware
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
 import mozilla.components.browser.state.action.BrowserAction
@@ -89,7 +90,9 @@ class MediaMiddleware(
             is MediaAction.AddMediaAction,
             is MediaAction.RemoveMediaAction,
             is MediaAction.RemoveTabMediaAction,
+            is MediaAction.UpdateMediaVolumeAction,
             is MediaAction.UpdateMediaStateAction -> {
+                Log.i("SKDBG", "*** ${action.javaClass.simpleName} ***")
                 mediaAggregateUpdate.process(store)
             }
 
