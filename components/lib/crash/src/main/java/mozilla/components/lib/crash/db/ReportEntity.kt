@@ -26,6 +26,7 @@ internal data class ReportEntity(
     /**
      * UUID of the crash that was reported.
      */
+    @ColumnInfo(name = "crash_uuid")
     var crashUuid: String,
 
     /**

@@ -16,7 +16,7 @@ internal data class CrashWithReports(
 
     @Relation(
         parentColumn = "uuid",
-        entityColumn = "crashUuid"
+        entityColumn = "crash_uuid"
     )
     val reports: List<ReportEntity>
 )

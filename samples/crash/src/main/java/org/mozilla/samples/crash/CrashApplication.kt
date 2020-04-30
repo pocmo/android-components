@@ -19,6 +19,7 @@ import mozilla.components.lib.crash.CrashReporter
 import mozilla.components.lib.crash.service.CrashReporterService
 import mozilla.components.lib.crash.service.GleanCrashReporterService
 import mozilla.components.service.glean.Glean
+import java.util.UUID
 
 class CrashApplication : Application() {
     internal lateinit var crashReporter: CrashReporter
@@ -30,7 +31,10 @@ class CrashApplication : Application() {
         Log.addSink(AndroidLogSink())
 
         crashReporter = CrashReporter(
-            services = listOf(createDummyCrashService(this)),
+            context = this,
+            services = listOf(
+                createDummyCrashService(this)
+            ),
             telemetryServices = listOf(GleanCrashReporterService(applicationContext)),
             shouldPrompt = CrashReporter.Prompt.ALWAYS,
             promptConfiguration = CrashReporter.PromptConfiguration(
@@ -56,25 +60,37 @@ private fun createDummyCrashService(context: Context): CrashReporterService {
     // For this sample we create a dummy service. In a real application this would be an instance of SentryCrashService
     // or SocorroCrashService.
     return object : CrashReporterService {
+        override val id: String = "dummy"
+
+        override val name: String = "Dummy"
+
+        override fun createCrashReportUrl(identifier: String): String? {
+            return "https://example.org/$identifier"
+        }
+
         override fun report(crash: Crash.UncaughtExceptionCrash): String? {
             GlobalScope.launch(Dispatchers.Main) {
                 Toast.makeText(context, "Uploading uncaught exception crash...", Toast.LENGTH_SHORT).show()
             }
-            return null
+            return createDummyId()
         }
 
         override fun report(crash: Crash.NativeCodeCrash): String? {
             GlobalScope.launch(Dispatchers.Main) {
                 Toast.makeText(context, "Uploading native crash...", Toast.LENGTH_SHORT).show()
             }
-            return null
+            return createDummyId()
         }
 
         override fun report(throwable: Throwable): String? {
             GlobalScope.launch(Dispatchers.Main) {
                 Toast.makeText(context, "Uploading caught exception...", Toast.LENGTH_SHORT).show()
             }
-            return null
+            return createDummyId()
+        }
+
+        private fun createDummyId(): String {
+            return "dummy${UUID.randomUUID().toString().hashCode()}"
         }
     }
 }
