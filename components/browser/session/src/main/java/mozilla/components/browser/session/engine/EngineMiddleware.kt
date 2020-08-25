@@ -25,7 +25,7 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.Store
 import mozilla.components.support.base.log.logger.Logger
 
 /**
@@ -52,7 +52,7 @@ object EngineMiddleware {
                 sessionLookup,
                 scope
             ),
-            LinkingMiddleware(sessionLookup),
+            LinkingMiddleware(scope, sessionLookup),
             TabsRemovedMiddleware(scope),
             SuspendMiddleware(scope),
             WebExtensionMiddleware(),
@@ -71,7 +71,7 @@ internal fun getOrCreateEngineSession(
     engine: Engine,
     logger: Logger,
     sessionLookup: (String) -> Session?,
-    store: MiddlewareStore<BrowserState, BrowserAction>,
+    store: Store<BrowserState, BrowserAction>,
     tabId: String
 ): EngineSession? {
     val tab = store.state.findTabOrCustomTab(tabId)
@@ -93,7 +93,7 @@ private fun createEngineSession(
     engine: Engine,
     logger: Logger,
     sessionLookup: (String) -> Session?,
-    store: MiddlewareStore<BrowserState, BrowserAction>,
+    store: Store<BrowserState, BrowserAction>,
     tab: SessionState
 ): EngineSession? {
     val session = sessionLookup(tab.id)

@@ -12,7 +12,7 @@ import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.MiddlewareContext
 import mozilla.components.support.base.log.logger.Logger
 
 /**
@@ -27,15 +27,14 @@ internal class WebExtensionMiddleware : Middleware<BrowserState, BrowserAction> 
     internal var activeWebExtensionTabId: String? = null
 
     override fun invoke(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
-
         when (action) {
             is EngineAction.UnlinkEngineSessionAction -> {
                 if (activeWebExtensionTabId == action.sessionId) {
-                    val activeTab = store.state.findTab(action.sessionId)
+                    val activeTab = context.state.findTab(action.sessionId)
                     activeTab?.engineState?.engineSession?.markActiveForWebExtensions(false)
                 }
             }
@@ -46,7 +45,7 @@ internal class WebExtensionMiddleware : Middleware<BrowserState, BrowserAction> 
         when (action) {
             is TabListAction,
             is EngineAction.LinkEngineSessionAction -> {
-                switchActiveStateIfNeeded(store.state)
+                switchActiveStateIfNeeded(context.state)
             }
         }
     }

@@ -179,10 +179,10 @@ class SessionUseCasesTest {
     @Test
     fun exitFullscreen() {
         useCases.exitFullscreen(selectedSession)
-        verify(store).dispatch(EngineAction.ExitFullscreenModeAction(selectedSessionId))
+        verify(store).dispatch(EngineAction.ExitFullScreenModeAction(selectedSessionId))
 
         useCases.exitFullscreen()
-        verify(store, times(2)).dispatch(EngineAction.ExitFullscreenModeAction(selectedSessionId))
+        verify(store, times(2)).dispatch(EngineAction.ExitFullScreenModeAction(selectedSessionId))
     }
 
     @Test

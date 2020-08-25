@@ -11,12 +11,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.session.engine.request.LoadRequestOption
-import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.CrashAction
 import mozilla.components.browser.state.action.TrackingProtectionAction
 import mozilla.components.browser.state.selector.findTab
-import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.content.FindResultState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.EngineSession
@@ -30,7 +28,6 @@ import mozilla.components.concept.engine.media.Media
 import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
-import mozilla.components.lib.state.MiddlewareStore
 import mozilla.components.support.base.observer.Consumable
 import mozilla.components.support.test.any
 import mozilla.components.support.test.libstate.ext.waitUntilIdle
@@ -209,7 +206,7 @@ class EngineObserverTest {
     @Test
     fun engineSessionObserverExcludedOnTrackingProtection() {
         val session = Session("")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onExcludedOnTrackingProtectionChange(true)
@@ -379,7 +376,7 @@ class EngineObserverTest {
     @Test
     fun engineObserverPassingHitResult() {
         val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
         val hitResult = HitResult.UNKNOWN("data://foobar")
 
@@ -393,7 +390,7 @@ class EngineObserverTest {
     @Test
     fun engineObserverClearsFindResults() {
         val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onFindResult(0, 1, false)
@@ -413,7 +410,7 @@ class EngineObserverTest {
     @Test
     fun engineObserverClearsFindResultIfNewPageStartsLoading() {
         val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onFindResult(0, 1, false)
@@ -438,7 +435,7 @@ class EngineObserverTest {
     @Test
     fun engineObserverNotifiesFullscreenMode() {
         val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onFullScreenChange(true)
@@ -457,7 +454,7 @@ class EngineObserverTest {
 
     @Test
     fun engineObserverNotifiesMetaViewportFitChange() {
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val session = Session("https://www.mozilla.org", id = "test-id")
         val observer = EngineObserver(session, store)
 
@@ -489,7 +486,7 @@ class EngineObserverTest {
     @Test
     fun `Engine observer notified when thumbnail is assigned`() {
         val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
         val emptyBitmap = spy(Bitmap::class.java)
         observer.onThumbnailChange(emptyBitmap)
@@ -554,7 +551,7 @@ class EngineObserverTest {
     fun engineObserverHandlesPromptRequest() {
         val promptRequest = mock(PromptRequest::class.java)
         val session = Session(id = "test-session", initialUrl = "")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onPromptRequest(promptRequest)
@@ -568,7 +565,7 @@ class EngineObserverTest {
     fun engineObserverHandlesWindowRequest() {
         val windowRequest = mock(WindowRequest::class.java)
         val session = Session("")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         whenever(store.state).thenReturn(mock())
         val observer = EngineObserver(session, store)
 
@@ -582,7 +579,7 @@ class EngineObserverTest {
     @Test
     fun engineObserverHandlesFirstContentfulPaint() {
         val session = Session("")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         whenever(store.state).thenReturn(mock())
         val observer = EngineObserver(session, store)
 
@@ -602,7 +599,7 @@ class EngineObserverTest {
         val session = Session("https://www.mozilla.org", id = "test-tab").also {
             sessionManager.add(it)
         }
-        val observer = EngineObserver(session, store.toMiddlewareStore())
+        val observer = EngineObserver(session, store)
         assertEquals(0, store.state.media.elements.size)
 
         val media1: Media = spy(object : Media() {
@@ -654,7 +651,7 @@ class EngineObserverTest {
         val session = Session("https://www.mozilla.org", id = "test-tab").also {
             sessionManager.add(it)
         }
-        val observer = EngineObserver(session, store.toMiddlewareStore())
+        val observer = EngineObserver(session, store)
 
         val media1: Media = spy(object : Media() {
             override val controller: Controller = mock()
@@ -702,7 +699,7 @@ class EngineObserverTest {
             sessionManager.add(it)
         }
 
-        val observer = EngineObserver(session, store.toMiddlewareStore())
+        val observer = EngineObserver(session, store)
 
         observer.onExternalResource(
                 url = "mozilla.org/file.txt",
@@ -731,7 +728,7 @@ class EngineObserverTest {
         val session = Session("https://www.mozilla.org", id = "test-tab").also {
             sessionManager.add(it)
         }
-        val observer = EngineObserver(session, store.toMiddlewareStore())
+        val observer = EngineObserver(session, store)
 
         observer.onExternalResource(url = "mozilla.org/file.txt", contentLength = -1)
 
@@ -746,7 +743,7 @@ class EngineObserverTest {
     fun `onCrashStateChanged will update session and notify observer`() {
         val session = Session("https://www.mozilla.org", id = "test-id")
 
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onCrash()
@@ -851,7 +848,7 @@ class EngineObserverTest {
     @Test
     fun `onHistoryStateChanged dispatches UpdateHistoryStateAction`() {
         val session = Session("")
-        val store: MiddlewareStore<BrowserState, BrowserAction> = mock()
+        val store: BrowserStore = mock()
         val observer = EngineObserver(session, store)
 
         observer.onHistoryStateChanged(emptyList(), 0)
@@ -878,17 +875,5 @@ class EngineObserverTest {
                 currentIndex = 1
             )
         )
-    }
-}
-
-private fun BrowserStore.toMiddlewareStore(): MiddlewareStore<BrowserState, BrowserAction> {
-    val store = this
-    return object : MiddlewareStore<BrowserState, BrowserAction> {
-        override val state: BrowserState
-            get() = store.state
-
-        override fun dispatch(action: BrowserAction) {
-            store.dispatch(action)
-        }
     }
 }

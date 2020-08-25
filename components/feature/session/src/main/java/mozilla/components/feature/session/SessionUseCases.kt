@@ -280,7 +280,7 @@ class SessionUseCases(
                 return
             }
 
-            store.dispatch(EngineAction.ExitFullscreenModeAction(
+            store.dispatch(EngineAction.ExitFullScreenModeAction(
                 session.id
             ))
         }

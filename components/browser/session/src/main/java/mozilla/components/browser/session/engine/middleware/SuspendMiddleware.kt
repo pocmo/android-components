@@ -14,7 +14,7 @@ import mozilla.components.browser.state.state.EngineState
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.MiddlewareContext
 
 /**
  * [Middleware] implementation responsible for suspending an [EngineSession].
@@ -28,22 +28,22 @@ internal class SuspendMiddleware(
     private val scope: CoroutineScope
 ) : Middleware<BrowserState, BrowserAction> {
     override fun invoke(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
         if (action is EngineAction.SuspendEngineSessionAction) {
-            suspend(store, action)
+            suspend(context, action)
         } else {
             next(action)
         }
     }
 
     private fun suspend(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         action: EngineAction.SuspendEngineSessionAction
     ) {
-        val tab = store.state.findTab(action.sessionId)
+        val tab = context.state.findTab(action.sessionId)
         val state = tab?.engineState?.engineSession?.saveState()
 
         if (tab == null || state == null) {
@@ -53,12 +53,12 @@ internal class SuspendMiddleware(
         }
 
         // First we unlink (which clearsEngineSession and state)
-        store.dispatch(EngineAction.UnlinkEngineSessionAction(
+        context.dispatch(EngineAction.UnlinkEngineSessionAction(
             tab.id
         ))
 
         // Then we attach the saved state to it.
-        store.dispatch(EngineAction.UpdateEngineSessionStateAction(
+        context.dispatch(EngineAction.UpdateEngineSessionStateAction(
             tab.id,
             state
         ))

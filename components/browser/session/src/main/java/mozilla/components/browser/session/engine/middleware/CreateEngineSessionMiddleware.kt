@@ -14,7 +14,8 @@ import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.MiddlewareContext
+import mozilla.components.lib.state.Store
 import mozilla.components.support.base.log.logger.Logger
 
 /**
@@ -29,19 +30,19 @@ internal class CreateEngineSessionMiddleware(
     private val logger = Logger("CreateEngineSessionMiddleware")
 
     override fun invoke(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
         if (action is EngineAction.CreateEngineSessionAction) {
-            createEngineSession(store, action)
+            createEngineSession(context.store, action)
         } else {
             next(action)
         }
     }
 
     private fun createEngineSession(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        store: Store<BrowserState, BrowserAction>,
         action: EngineAction.CreateEngineSessionAction
     ) {
         logger.debug("Request to create engine session for tab ${action.tabId}")

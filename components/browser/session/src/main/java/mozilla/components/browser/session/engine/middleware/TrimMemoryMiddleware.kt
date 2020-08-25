@@ -10,26 +10,26 @@ import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.MiddlewareContext
 
 /**
  * [Middleware] responsible for suspending [EngineSession] instances on low memory.
  */
 internal class TrimMemoryMiddleware : Middleware<BrowserState, BrowserAction> {
     override fun invoke(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
         next(action)
 
         if (action is SystemAction.LowMemoryAction) {
-            trimMemory(store, action)
+            trimMemory(context, action)
         }
     }
 
     private fun trimMemory(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        store: MiddlewareContext<BrowserState, BrowserAction>,
         action: SystemAction.LowMemoryAction
     ) {
         if (!shouldCloseEngineSessions(action.level)) {

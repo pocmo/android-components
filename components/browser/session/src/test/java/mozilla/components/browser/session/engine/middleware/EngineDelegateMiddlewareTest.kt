@@ -16,6 +16,7 @@ import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.support.test.ext.joinBlocking
+import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.whenever
 import org.junit.Assert.assertEquals
@@ -376,8 +377,10 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
+
         val session: Session = mock()
         whenever(session.id).thenReturn(tab.id)
+
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
@@ -394,10 +397,12 @@ class EngineDelegateMiddlewareTest {
             "https://www.mozilla.org"
         )).joinBlocking()
 
+        store.waitUntilIdle()
         dispatcher.advanceUntilIdle()
 
         verify(engine).createSession(private = false, contextId = null)
         verify(engineSession, times(1)).loadUrl("https://www.mozilla.org")
+
         assertEquals(engineSession, store.state.tabs[0].engineState.engineSession)
     }
 
@@ -706,7 +711,7 @@ class EngineDelegateMiddlewareTest {
             )
         )
 
-        store.dispatch(EngineAction.ExitFullscreenModeAction(
+        store.dispatch(EngineAction.ExitFullScreenModeAction(
             "test-tab"
         )).joinBlocking()
 
@@ -745,6 +750,7 @@ class EngineDelegateMiddlewareTest {
             data = Engine.BrowsingData.allCaches()
         )).joinBlocking()
 
+        store.waitUntilIdle()
         dispatcher.advanceUntilIdle()
 
         verify(engine).createSession(private = false, contextId = null)

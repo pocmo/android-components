@@ -505,7 +505,7 @@ sealed class EngineAction : BrowserAction() {
     /**
      * Exits fullscreen mode in the tabs with the given [sessionId].
      */
-    data class ExitFullscreenModeAction(
+    data class ExitFullScreenModeAction(
         val sessionId: String
     ) : EngineAction()
 

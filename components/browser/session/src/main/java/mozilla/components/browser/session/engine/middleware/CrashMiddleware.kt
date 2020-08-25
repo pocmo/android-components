@@ -15,7 +15,8 @@ import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.MiddlewareContext
+import mozilla.components.lib.state.Store
 import mozilla.components.support.base.log.logger.Logger
 
 /**
@@ -29,19 +30,19 @@ internal class CrashMiddleware(
     private val logger = Logger("CrashMiddleware")
 
     override fun invoke(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
         if (action is CrashAction.RestoreCrashedSessionAction) {
-            restore(store, action)
+            restore(context.store, action)
         }
 
         next(action)
     }
 
     private fun restore(
-        store: MiddlewareStore<BrowserState, BrowserAction>,
+        store: Store<BrowserState, BrowserAction>,
         action: CrashAction.RestoreCrashedSessionAction
     ) = scope.launch {
         val tab = store.state.findTabOrCustomTab(action.tabId) ?: return@launch

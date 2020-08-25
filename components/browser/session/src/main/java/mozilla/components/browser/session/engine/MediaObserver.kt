@@ -10,7 +10,7 @@ import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.MediaState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.media.Media
-import mozilla.components.lib.state.MiddlewareStore
+import mozilla.components.lib.state.Store
 
 /**
  * [Media.Observer] implementation responsible for dispatching actions updating the state in
@@ -19,7 +19,7 @@ import mozilla.components.lib.state.MiddlewareStore
 internal class MediaObserver(
     val media: Media,
     val element: MediaState.Element,
-    val store: MiddlewareStore<BrowserState, BrowserAction>,
+    val store: Store<BrowserState, BrowserAction>,
     val tabId: String
 ) : Media.Observer {
     override fun onStateChanged(media: Media, state: Media.State) {
