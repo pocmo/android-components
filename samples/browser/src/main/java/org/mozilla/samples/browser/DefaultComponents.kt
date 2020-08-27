@@ -67,6 +67,7 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webnotifications.WebNotificationFeature
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.lib.nearby.NearbyConnection
+import mozilla.components.lib.state.debug.DebugServerMiddleware
 import mozilla.components.service.digitalassetlinks.local.StatementApi
 import mozilla.components.service.digitalassetlinks.local.StatementRelationChecker
 import org.mozilla.samples.browser.addons.AddonsActivity
@@ -124,6 +125,7 @@ open class DefaultComponents(private val applicationContext: Context) {
 
     val store by lazy {
         BrowserStore(middleware = listOf(
+            DebugServerMiddleware(),
             MediaMiddleware(applicationContext, MediaService::class.java),
             DownloadMiddleware(applicationContext, DownloadService::class.java),
             ReaderViewMiddleware(),
