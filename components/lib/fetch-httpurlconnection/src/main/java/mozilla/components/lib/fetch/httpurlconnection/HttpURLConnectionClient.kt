@@ -4,14 +4,18 @@
 
 package mozilla.components.lib.fetch.httpurlconnection
 
-import mozilla.components.concept.fetch.BuildConfig
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.Headers
-import mozilla.components.concept.fetch.MutableHeaders
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.Response
-import mozilla.components.concept.fetch.isDataUri
+import mozilla.components.multiplatform.concept.fetch.BuildConfig
+import mozilla.components.multiplatform.concept.fetch.Client
+import mozilla.components.multiplatform.concept.fetch.Headers
+import mozilla.components.multiplatform.concept.fetch.MutableHeaders
+import mozilla.components.multiplatform.concept.fetch.Request
+import mozilla.components.multiplatform.concept.fetch.Response
+import mozilla.components.multiplatform.concept.fetch.isDataUri
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient.Companion.getOrCreateCookieManager
+import mozilla.components.multiplatform.concept.fetch.fetchDataUri
+import okio.buffer
+import okio.sink
+import okio.source
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -26,7 +30,7 @@ import java.util.zip.GZIPInputStream
  */
 class HttpURLConnectionClient : Client() {
     private val defaultHeaders: Headers = MutableHeaders(
-        "User-Agent" to "MozacFetch/${BuildConfig.LIBRARY_VERSION}",
+        //"User-Agent" to "MozacFetch/${BuildConfig.LIBRARY_VERSION}",
         "Accept-Encoding" to "gzip"
     )
 
@@ -64,12 +68,17 @@ private fun HttpURLConnection.addBodyFrom(request: Request) {
         doOutput = true
 
         body.useStream { inStream ->
+            val sink = outputStream.sink().buffer()
+            sink.writeAll(inStream)
+            sink.flush()
+            /*
             outputStream.use { outStream ->
                 inStream
                     .buffered()
                     .copyTo(outStream)
                 outStream.flush()
             }
+             */
         }
     }
 }
@@ -78,6 +87,7 @@ internal fun HttpURLConnection.setupWith(request: Request) {
     requestMethod = request.method.name
     instanceFollowRedirects = request.redirect == Request.Redirect.FOLLOW
 
+    /*
     request.connectTimeout?.let { (timeout, unit) ->
         connectTimeout = unit.toMillis(timeout).toInt()
     }
@@ -85,6 +95,7 @@ internal fun HttpURLConnection.setupWith(request: Request) {
     request.readTimeout?.let { (timeout, unit) ->
         readTimeout = unit.toMillis(timeout).toInt()
     }
+     */
 
     useCaches = request.useCaches
 
@@ -168,14 +179,14 @@ private fun createBody(connection: HttpURLConnection, contentType: String?): Res
     return EmptyBody()
 }
 
-private class EmptyBody : Response.Body("".byteInputStream())
+private class EmptyBody : Response.Body("".byteInputStream().source())
 
 private class HttpUrlConnectionBody(
     private val connection: HttpURLConnection,
     stream: InputStream,
     gzipped: Boolean,
     contentType: String?
-) : Response.Body(if (gzipped) GZIPInputStream(stream) else stream, contentType) {
+) : Response.Body(if (gzipped) GZIPInputStream(stream).source() else stream.source(), contentType) {
     override fun close() {
         super.close()
 

@@ -11,12 +11,14 @@ import androidx.annotation.VisibleForTesting.NONE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.components.Build
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.Headers
-import mozilla.components.concept.fetch.MutableHeaders
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.Response
-import mozilla.components.concept.fetch.isSuccess
+import mozilla.components.multiplatform.concept.fetch.Client
+import mozilla.components.multiplatform.concept.fetch.Headers
+import mozilla.components.multiplatform.concept.fetch.MutableHeaders
+import mozilla.components.multiplatform.concept.fetch.Request
+import mozilla.components.multiplatform.concept.fetch.Response
+import mozilla.components.multiplatform.concept.fetch.fromString
+import mozilla.components.multiplatform.concept.fetch.isSuccess
+import mozilla.components.multiplatform.concept.fetch.string
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.kotlin.sanitizeURL
 import org.json.JSONException
@@ -133,13 +135,16 @@ private fun Client.fetchRegion(regionServiceUrl: String): LocationService.Region
         // address to provide a region response. Technically it's possible to also provide data
         // about nearby Bluetooth, cell or WiFi networks.
         body = Request.Body.fromString(EMPTY_REQUEST_BODY),
-        connectTimeout = Pair(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS),
-        readTimeout = Pair(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        // connectTimeout = Pair(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        // readTimeout = Pair(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
     )
 
     return try {
         fetch(request).toRegion()
     } catch (e: IOException) {
+        Logger.debug(message = "Could not fetch region from location service", throwable = e)
+        null
+    } catch (e: Client.FetchException) {
         Logger.debug(message = "Could not fetch region from location service", throwable = e)
         null
     }

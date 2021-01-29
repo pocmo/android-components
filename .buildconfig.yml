@@ -452,6 +452,10 @@ projects:
     description: 'A Gradle plugin to generate code for Glean metrics.'
     publish: true
     artifact-type: jar
+  multiplatform-concept-fetch:
+    path: components/multiplatform/concept-fetch
+    description: 'An abstract definition of an HTTP client for fetching resources.'
+    publish: false
   multiplatform-lib-dummy:
     path: components/multiplatform/lib-dummy
     description: 'A dummy multiplatform library for testing purposes'

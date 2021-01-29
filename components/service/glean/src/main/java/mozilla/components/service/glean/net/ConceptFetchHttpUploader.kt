@@ -6,15 +6,16 @@ package mozilla.components.service.glean.net
 
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.PRIVATE
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.Header
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.toMutableHeaders
+import mozilla.components.multiplatform.concept.fetch.Client
+import mozilla.components.multiplatform.concept.fetch.Header
+import mozilla.components.multiplatform.concept.fetch.Request
+import mozilla.components.multiplatform.concept.fetch.toMutableHeaders
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.telemetry.glean.net.HeadersList
 import mozilla.telemetry.glean.net.HttpResponse
 import mozilla.telemetry.glean.net.RecoverableFailure
 import mozilla.telemetry.glean.net.UploadResult
+import okio.source
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import mozilla.telemetry.glean.net.PingUploader as CorePingUploader
@@ -68,6 +69,9 @@ class ConceptFetchHttpUploader(
         } catch (e: IOException) {
             logger.warn("IOException while uploading ping", e)
             RecoverableFailure
+        } catch (e: Client.FetchException) {
+            logger.warn("FetchException while uploading ping", e)
+            RecoverableFailure
         }
     }
 
@@ -82,14 +86,14 @@ class ConceptFetchHttpUploader(
         return Request(
             url = url,
             method = Request.Method.POST,
-            connectTimeout = Pair(DEFAULT_CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS),
-            readTimeout = Pair(DEFAULT_READ_TIMEOUT, TimeUnit.MILLISECONDS),
+            //connectTimeout = Pair(DEFAULT_CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS),
+            //readTimeout = Pair(DEFAULT_READ_TIMEOUT, TimeUnit.MILLISECONDS),
             headers = conceptHeaders,
             // Make sure we are not sending cookies. Unfortunately, HttpURLConnection doesn't
             // offer a better API to do that, so we nuke all cookies going to our telemetry
             // endpoint.
             cookiePolicy = Request.CookiePolicy.OMIT,
-            body = Request.Body(data.inputStream())
+            body = Request.Body(data.inputStream().source())
         )
     }
 

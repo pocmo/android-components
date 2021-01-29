@@ -50,7 +50,7 @@ dependencies {
     api GLEAN_LIBRARY
 
     // So consumers can set a HTTP client.
-    api project(':concept-fetch')
+    api project(':multiplatform-concept-fetch')
 
     implementation project(':support-ktx')
     implementation project(':support-base')

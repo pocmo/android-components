@@ -6,11 +6,13 @@ package mozilla.components.service.location
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
-import mozilla.components.concept.fetch.Client
-import mozilla.components.concept.fetch.MutableHeaders
-import mozilla.components.concept.fetch.Request
-import mozilla.components.concept.fetch.Response
+import mozilla.components.multiplatform.concept.fetch.Client
+import mozilla.components.multiplatform.concept.fetch.MutableHeaders
+import mozilla.components.multiplatform.concept.fetch.Request
+import mozilla.components.multiplatform.concept.fetch.Response
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
+import mozilla.components.multiplatform.concept.fetch.empty
+import mozilla.components.multiplatform.concept.fetch.fromStream
 import mozilla.components.support.test.any
 import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.mock
@@ -71,7 +73,7 @@ class MozillaLocationServiceTest {
     @Test
     fun `WHEN client throws IOException THEN the returned region is null`() {
         val client: Client = mock()
-        doThrow(IOException()).`when`(client).fetch(any())
+        doThrow(Client.FetchException()).`when`(client).fetch(any())
 
         val service = MozillaLocationService(testContext, client, apiKey = "test")
         val region = runBlocking { service.fetchRegion() }
@@ -86,7 +88,7 @@ class MozillaLocationServiceTest {
             url = "http://example.org",
             status = 200,
             headers = MutableHeaders(),
-            body = Response.Body("{\"country_name\": \"France\", \"country_code\": \"FR\"}".byteInputStream())
+            body = Response.Body.fromStream("{\"country_name\": \"France\", \"country_code\": \"FR\"}".byteInputStream())
         )
         doReturn(response).`when`(client).fetch(any())
 
@@ -129,7 +131,7 @@ class MozillaLocationServiceTest {
             url = "http://example.org",
             status = 500,
             headers = MutableHeaders(),
-            body = Response.Body("Internal Server Error".byteInputStream())
+            body = Response.Body.fromStream("Internal Server Error".byteInputStream())
         )
         doReturn(response).`when`(client).fetch(any())
 
@@ -146,7 +148,7 @@ class MozillaLocationServiceTest {
             url = "http://example.org",
             status = 200,
             headers = MutableHeaders(),
-            body = Response.Body("{\"country_name\": \"France\",".byteInputStream())
+            body = Response.Body.fromStream("{\"country_name\": \"France\",".byteInputStream())
         )
         doReturn(response).`when`(client).fetch(any())
 
@@ -163,7 +165,7 @@ class MozillaLocationServiceTest {
             url = "http://example.org",
             status = 200,
             headers = MutableHeaders(),
-            body = Response.Body("{}".byteInputStream())
+            body = Response.Body.fromStream("{}".byteInputStream())
         )
         doReturn(response).`when`(client).fetch(any())
 
@@ -180,7 +182,7 @@ class MozillaLocationServiceTest {
             url = "http://example.org",
             status = 200,
             headers = MutableHeaders(),
-            body = Response.Body("{\"country_code\": \"DE\"}".byteInputStream())
+            body = Response.Body.fromStream("{\"country_code\": \"DE\"}".byteInputStream())
         )
         doReturn(response).`when`(client).fetch(any())
 
@@ -198,7 +200,7 @@ class MozillaLocationServiceTest {
                 url = "http://example.org",
                 status = 200,
                 headers = MutableHeaders(),
-                body = Response.Body("{\"country_name\": \"Nepal\", \"country_code\": \"NP\"}".byteInputStream())
+                body = Response.Body.fromStream("{\"country_name\": \"Nepal\", \"country_code\": \"NP\"}".byteInputStream())
             )
             doReturn(response).`when`(client).fetch(any())
 
@@ -236,7 +238,7 @@ class MozillaLocationServiceTest {
                 url = "http://example.org",
                 status = 200,
                 headers = MutableHeaders(),
-                body = Response.Body("{\"country_name\": \"Nepal\", \"country_code\": \"NP\"}".byteInputStream())
+                body = Response.Body.fromStream("{\"country_name\": \"Nepal\", \"country_code\": \"NP\"}".byteInputStream())
             )
             doReturn(response).`when`(client).fetch(any())
 
@@ -257,7 +259,7 @@ class MozillaLocationServiceTest {
                 url = "http://example.org",
                 status = 200,
                 headers = MutableHeaders(),
-                body = Response.Body("{\"country_name\": \"Liberia\", \"country_code\": \"LR\"}".byteInputStream())
+                body = Response.Body.fromStream("{\"country_name\": \"Liberia\", \"country_code\": \"LR\"}".byteInputStream())
             )
             doReturn(response).`when`(client).fetch(any())
 
