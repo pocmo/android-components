@@ -2,15 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.browser.session.engine
+package mozilla.components.browser.state.engine
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Environment
-import androidx.core.net.toUri
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.ext.syncDispatch
 import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.CrashAction
@@ -20,6 +16,7 @@ import mozilla.components.browser.state.action.TrackingProtectionAction
 import mozilla.components.browser.state.state.AppIntentState
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.browser.state.state.LoadRequestState
+import mozilla.components.browser.state.state.SecurityInfoState
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.browser.state.state.content.DownloadState.Status.INITIATED
 import mozilla.components.browser.state.state.content.FindResultState
@@ -36,8 +33,6 @@ import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.concept.fetch.Response
 import mozilla.components.lib.state.Store
-import mozilla.components.support.ktx.android.net.isInScope
-import mozilla.components.support.ktx.kotlin.isSameOriginAs
 
 /**
  * [EngineSession.Observer] implementation responsible to update the state of a [Session] from the events coming out of
@@ -45,58 +40,23 @@ import mozilla.components.support.ktx.kotlin.isSameOriginAs
  */
 @Suppress("TooManyFunctions", "LargeClass")
 internal class EngineObserver(
-    private val session: Session,
-    private val store: Store<BrowserState, BrowserAction>?
+    private val tabId: String,
+    private val store: Store<BrowserState, BrowserAction>
 ) : EngineSession.Observer {
     override fun onNavigateBack() {
-        store?.dispatch(ContentAction.UpdateSearchTermsAction(session.id, ""))
+        store.dispatch(ContentAction.UpdateSearchTermsAction(tabId, ""))
     }
 
     override fun onFirstContentfulPaint() {
-        store?.dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(session.id, true))
+        store.dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(tabId, true))
     }
 
     override fun onPaintStatusReset() {
-        store?.dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(session.id, false))
+        store.dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(tabId, false))
     }
 
     override fun onLocationChange(url: String) {
-        if (!isUrlSame(session.url, url)) {
-            session.title = ""
-        }
-
-        if (!isInScope(session.webAppManifest, url)) {
-            session.webAppManifest = null
-        }
-
-        if (!session.url.isSameOriginAs(url)) {
-            store?.dispatch(ContentAction.ClearPermissionRequests(session.id))
-        }
-
-        session.url = url
-    }
-
-    private fun isUrlSame(originalUrl: String, newUrl: String): Boolean {
-        val originalUri = Uri.parse(originalUrl)
-        val uri = Uri.parse(newUrl)
-
-        return uri.port == originalUri.port &&
-            uri.host == originalUri.host &&
-            uri.path?.trimStart('/') == originalUri.path?.trimStart('/') &&
-            uri.query == originalUri.query
-    }
-
-    /**
-     * Checks that the [newUrl] is in scope of the web app manifest.
-     *
-     * https://www.w3.org/TR/appmanifest/#dfn-within-scope
-     */
-    private fun isInScope(manifest: WebAppManifest?, newUrl: String): Boolean {
-        val scope = manifest?.scope ?: manifest?.startUrl ?: return false
-        val scopeUri = scope.toUri()
-        val newUri = newUrl.toUri()
-
-        return newUri.isInScope(listOf(scopeUri))
+        store.dispatch(ContentAction.UpdateUrlAction(tabId, url))
     }
 
     @Suppress("DEPRECATION") // Session observable is deprecated
@@ -106,83 +66,82 @@ internal class EngineObserver(
         triggeredByWebContent: Boolean
     ) {
         if (triggeredByRedirect || triggeredByWebContent) {
-            store?.dispatch(ContentAction.UpdateSearchTermsAction(session.id, ""))
-        }
-
-        session.notifyObservers {
-            onLoadRequest(session, url, triggeredByRedirect, triggeredByWebContent)
+            store.dispatch(ContentAction.UpdateSearchTermsAction(tabId, ""))
         }
 
         val loadRequest = LoadRequestState(url, triggeredByRedirect, triggeredByWebContent)
-        store?.dispatch(ContentAction.UpdateLoadRequestAction(session.id, loadRequest))
+        store.dispatch(ContentAction.UpdateLoadRequestAction(tabId, loadRequest))
     }
 
     override fun onLaunchIntentRequest(url: String, appIntent: Intent?) {
-        store?.dispatch(ContentAction.UpdateAppIntentAction(session.id, AppIntentState(url, appIntent)))
+        store.dispatch(ContentAction.UpdateAppIntentAction(tabId, AppIntentState(url, appIntent)))
     }
 
     override fun onTitleChange(title: String) {
-        session.title = title
+        store.dispatch(ContentAction.UpdateTitleAction(tabId, title))
     }
 
     override fun onProgress(progress: Int) {
-        session.progress = progress
+        store.dispatch(ContentAction.UpdateProgressAction(tabId, progress))
     }
 
     override fun onLoadingStateChange(loading: Boolean) {
-        session.loading = loading
-        if (loading) {
-            store?.dispatch(ContentAction.ClearFindResultsAction(session.id))
-            store?.dispatch(ContentAction.UpdateRefreshCanceledStateAction(session.id, false))
+        store.dispatch(ContentAction.UpdateLoadingStateAction(tabId, loading))
 
-            session.trackersBlocked = emptyList()
-            session.trackersLoaded = emptyList()
+        if (loading) {
+            store.dispatch(ContentAction.ClearFindResultsAction(tabId))
+            store.dispatch(ContentAction.UpdateRefreshCanceledStateAction(tabId, false))
+            store.dispatch(TrackingProtectionAction.ClearTrackersAction(tabId))
         }
     }
 
     override fun onNavigationStateChange(canGoBack: Boolean?, canGoForward: Boolean?) {
         canGoBack?.let {
-            store?.syncDispatch(ContentAction.UpdateBackNavigationStateAction(session.id, canGoBack))
+            store.dispatch(ContentAction.UpdateBackNavigationStateAction(tabId, canGoBack))
         }
         canGoForward?.let {
-            store?.syncDispatch(ContentAction.UpdateForwardNavigationStateAction(session.id, canGoForward))
+            store.dispatch(ContentAction.UpdateForwardNavigationStateAction(tabId, canGoForward))
         }
     }
 
     override fun onSecurityChange(secure: Boolean, host: String?, issuer: String?) {
-        session.securityInfo = Session.SecurityInfo(secure, host
-                ?: "", issuer ?: "")
+        store.dispatch(
+            ContentAction.UpdateSecurityInfoAction(
+                tabId,
+                SecurityInfoState(secure, host ?: "", issuer ?: "")
+            )
+        )
     }
 
     override fun onTrackerBlocked(tracker: Tracker) {
-        session.trackersBlocked += tracker
+        store.dispatch(TrackingProtectionAction.TrackerBlockedAction(tabId, tracker))
     }
 
     override fun onTrackerLoaded(tracker: Tracker) {
-        session.trackersLoaded += tracker
+        store.dispatch(TrackingProtectionAction.TrackerLoadedAction(tabId, tracker))
     }
 
     override fun onExcludedOnTrackingProtectionChange(excluded: Boolean) {
-        store?.dispatch(TrackingProtectionAction.ToggleExclusionListAction(session.id, excluded))
+        store.dispatch(TrackingProtectionAction.ToggleExclusionListAction(tabId, excluded))
     }
 
     override fun onTrackerBlockingEnabledChange(enabled: Boolean) {
-        session.trackerBlockingEnabled = enabled
+        store.dispatch(TrackingProtectionAction.ToggleAction(tabId, enabled))
     }
 
     override fun onLongPress(hitResult: HitResult) {
-        store?.dispatch(
-            ContentAction.UpdateHitResultAction(session.id, hitResult)
+        store.dispatch(
+            ContentAction.UpdateHitResultAction(tabId, hitResult)
         )
     }
 
     override fun onFind(text: String) {
-        store?.dispatch(ContentAction.ClearFindResultsAction(session.id))
+        store.dispatch(ContentAction.ClearFindResultsAction(tabId))
     }
 
     override fun onFindResult(activeMatchOrdinal: Int, numberOfMatches: Int, isDoneCounting: Boolean) {
-        store?.dispatch(ContentAction.AddFindResultAction(
-            session.id,
+        store.dispatch(ContentAction.AddFindResultAction(
+            tabId,
             FindResultState(
                 activeMatchOrdinal,
                 numberOfMatches,
@@ -217,129 +176,129 @@ internal class EngineObserver(
             response = response
         )
 
-        store?.dispatch(ContentAction.UpdateDownloadAction(
-            session.id,
+        store.dispatch(ContentAction.UpdateDownloadAction(
+            tabId,
             download
         ))
     }
 
     override fun onDesktopModeChange(enabled: Boolean) {
-        store?.dispatch(ContentAction.UpdateDesktopModeAction(
-            session.id, enabled
+        store.dispatch(ContentAction.UpdateDesktopModeAction(
+            tabId, enabled
         ))
     }
 
     override fun onFullScreenChange(enabled: Boolean) {
-        store?.dispatch(ContentAction.FullScreenChangedAction(
-            session.id, enabled
+        store.dispatch(ContentAction.FullScreenChangedAction(
+            tabId, enabled
         ))
     }
 
     override fun onMetaViewportFitChanged(layoutInDisplayCutoutMode: Int) {
-        store?.dispatch(ContentAction.ViewportFitChangedAction(
-            session.id, layoutInDisplayCutoutMode
+        store.dispatch(ContentAction.ViewportFitChangedAction(
+            tabId, layoutInDisplayCutoutMode
         ))
     }
 
     override fun onThumbnailChange(bitmap: Bitmap?) {
-        store?.dispatch(if (bitmap == null) {
-                ContentAction.RemoveThumbnailAction(session.id)
+        store.dispatch(if (bitmap == null) {
+                ContentAction.RemoveThumbnailAction(tabId)
             } else {
-                ContentAction.UpdateThumbnailAction(session.id, bitmap)
+                ContentAction.UpdateThumbnailAction(tabId, bitmap)
             }
         )
     }
 
     override fun onContentPermissionRequest(permissionRequest: PermissionRequest) {
-        store?.dispatch(
+        store.dispatch(
             ContentAction.UpdatePermissionsRequest(
-                session.id,
+                tabId,
                 permissionRequest
             )
         )
     }
 
     override fun onCancelContentPermissionRequest(permissionRequest: PermissionRequest) {
-        store?.dispatch(
+        store.dispatch(
             ContentAction.ConsumePermissionsRequest(
-                session.id,
+                tabId,
                 permissionRequest
             )
         )
     }
 
     override fun onAppPermissionRequest(permissionRequest: PermissionRequest) {
-        store?.dispatch(
+        store.dispatch(
             ContentAction.UpdateAppPermissionsRequest(
-                session.id,
+                tabId,
                 permissionRequest
             )
         )
     }
 
     override fun onPromptRequest(promptRequest: PromptRequest) {
-        store?.dispatch(ContentAction.UpdatePromptRequestAction(
-            session.id,
+        store.dispatch(ContentAction.UpdatePromptRequestAction(
+            tabId,
             promptRequest
         ))
     }
 
     override fun onRepostPromptCancelled() {
-        store?.dispatch(ContentAction.UpdateRefreshCanceledStateAction(session.id, true))
+        store.dispatch(ContentAction.UpdateRefreshCanceledStateAction(tabId, true))
     }
 
     override fun onBeforeUnloadPromptDenied() {
-        store?.dispatch(ContentAction.UpdateRefreshCanceledStateAction(session.id, true))
+        store.dispatch(ContentAction.UpdateRefreshCanceledStateAction(tabId, true))
     }
 
     override fun onWindowRequest(windowRequest: WindowRequest) {
-        store?.dispatch(
+        store.dispatch(
             ContentAction.UpdateWindowRequestAction(
-                session.id,
+                tabId,
                 windowRequest
             )
         )
     }
 
     override fun onMediaActivated(mediaSessionController: MediaSession.Controller) {
-        store?.dispatch(MediaSessionAction.ActivatedMediaSessionAction(
-            session.id,
+        store.dispatch(MediaSessionAction.ActivatedMediaSessionAction(
+            tabId,
             mediaSessionController
         ))
     }
 
     override fun onMediaDeactivated() {
-        store?.dispatch(MediaSessionAction.DeactivatedMediaSessionAction(session.id))
+        store.dispatch(MediaSessionAction.DeactivatedMediaSessionAction(tabId))
     }
 
     override fun onMediaMetadataChanged(metadata: MediaSession.Metadata) {
-        store?.dispatch(MediaSessionAction.UpdateMediaMetadataAction(session.id, metadata))
+        store.dispatch(MediaSessionAction.UpdateMediaMetadataAction(tabId, metadata))
     }
 
     override fun onMediaPlaybackStateChanged(playbackState: MediaSession.PlaybackState) {
-        store?.dispatch(MediaSessionAction.UpdateMediaPlaybackStateAction(
-            session.id,
+        store.dispatch(MediaSessionAction.UpdateMediaPlaybackStateAction(
+            tabId,
             playbackState
         ))
     }
 
     override fun onMediaFeatureChanged(features: MediaSession.Feature) {
-        store?.dispatch(MediaSessionAction.UpdateMediaFeatureAction(
-            session.id,
+        store.dispatch(MediaSessionAction.UpdateMediaFeatureAction(
+            tabId,
             features
         ))
     }
 
     override fun onMediaPositionStateChanged(positionState: MediaSession.PositionState) {
-        store?.dispatch(MediaSessionAction.UpdateMediaPositionStateAction(
-            session.id,
+        store.dispatch(MediaSessionAction.UpdateMediaPositionStateAction(
+            tabId,
             positionState
         ))
     }
 
     override fun onMediaMuteChanged(muted: Boolean) {
-        store?.dispatch(MediaSessionAction.UpdateMediaMutedAction(
-            session.id,
+        store.dispatch(MediaSessionAction.UpdateMediaMutedAction(
+            tabId,
             muted
         ))
     }
@@ -348,44 +307,44 @@ internal class EngineObserver(
         fullscreen: Boolean,
         elementMetadata: MediaSession.ElementMetadata?
     ) {
-        store?.dispatch(MediaSessionAction.UpdateMediaFullscreenAction(
-            session.id,
+        store.dispatch(MediaSessionAction.UpdateMediaFullscreenAction(
+            tabId,
             fullscreen,
             elementMetadata
         ))
     }
 
     override fun onWebAppManifestLoaded(manifest: WebAppManifest) {
-        session.webAppManifest = manifest
+        store.dispatch(ContentAction.UpdateWebAppManifestAction(tabId, manifest))
     }
 
     override fun onCrash() {
-        store?.dispatch(CrashAction.SessionCrashedAction(
-            session.id
+        store.dispatch(CrashAction.SessionCrashedAction(
+            tabId
         ))
     }
 
     override fun onProcessKilled() {
-        store?.dispatch(EngineAction.KillEngineSessionAction(
-            session.id
+        store.dispatch(EngineAction.KillEngineSessionAction(
+            tabId
         ))
     }
 
     override fun onStateUpdated(state: EngineSessionState) {
-        store?.dispatch(EngineAction.UpdateEngineSessionStateAction(
-            session.id, state
+        store.dispatch(EngineAction.UpdateEngineSessionStateAction(
+            tabId, state
         ))
     }
 
     override fun onRecordingStateChanged(devices: List<RecordingDevice>) {
-        store?.dispatch(ContentAction.SetRecordingDevices(
-            session.id, devices
+        store.dispatch(ContentAction.SetRecordingDevices(
+            tabId, devices
         ))
     }
 
     override fun onHistoryStateChanged(historyList: List<HistoryItem>, currentIndex: Int) {
-        store?.dispatch(ContentAction.UpdateHistoryStateAction(
-            session.id,
+        store.dispatch(ContentAction.UpdateHistoryStateAction(
+            tabId,
             historyList,
             currentIndex
         ))

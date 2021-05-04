@@ -22,9 +22,8 @@ import mozilla.components.browser.menu.item.BrowserMenuHighlightableItem
 import mozilla.components.browser.menu.item.BrowserMenuImageText
 import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.SimpleBrowserMenuItem
-import mozilla.components.browser.session.Session
 import mozilla.components.browser.session.SessionManager
-import mozilla.components.browser.session.engine.EngineMiddleware
+import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.session.storage.SessionStorage
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
@@ -163,14 +162,10 @@ open class DefaultComponents(private val applicationContext: Context) {
             RecordingDevicesMiddleware(applicationContext),
             LastAccessMiddleware(),
             PromptMiddleware()
-        ) + EngineMiddleware.create(engine, ::findSessionById))
+        ) + EngineMiddleware.create(engine))
     }
 
     val customTabsStore by lazy { CustomTabsServiceStore() }
-
-    private fun findSessionById(tabId: String): Session? {
-        return sessionManager.findSessionById(tabId)
-    }
 
     private fun sessionManagerLookup(): SessionManager {
         return sessionManager

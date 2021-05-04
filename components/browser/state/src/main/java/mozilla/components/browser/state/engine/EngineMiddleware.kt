@@ -2,20 +2,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.browser.session.engine
+package mozilla.components.browser.state.engine
 
 import androidx.annotation.MainThread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.engine.middleware.CrashMiddleware
-import mozilla.components.browser.session.engine.middleware.CreateEngineSessionMiddleware
-import mozilla.components.browser.session.engine.middleware.EngineDelegateMiddleware
-import mozilla.components.browser.session.engine.middleware.LinkingMiddleware
-import mozilla.components.browser.session.engine.middleware.SuspendMiddleware
-import mozilla.components.browser.session.engine.middleware.TabsRemovedMiddleware
-import mozilla.components.browser.session.engine.middleware.TrimMemoryMiddleware
-import mozilla.components.browser.session.engine.middleware.WebExtensionMiddleware
+import mozilla.components.browser.state.engine.middleware.CrashMiddleware
+import mozilla.components.browser.state.engine.middleware.CreateEngineSessionMiddleware
+import mozilla.components.browser.state.engine.middleware.EngineDelegateMiddleware
+import mozilla.components.browser.state.engine.middleware.LinkingMiddleware
+import mozilla.components.browser.state.engine.middleware.SuspendMiddleware
+import mozilla.components.browser.state.engine.middleware.TabsRemovedMiddleware
+import mozilla.components.browser.state.engine.middleware.TrimMemoryMiddleware
+import mozilla.components.browser.state.engine.middleware.WebExtensionMiddleware
 import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.selector.findTabOrCustomTab
@@ -38,21 +37,18 @@ object EngineMiddleware {
      */
     fun create(
         engine: Engine,
-        sessionLookup: (String) -> Session?,
         scope: CoroutineScope = MainScope()
     ): List<Middleware<BrowserState, BrowserAction>> {
         return listOf(
             EngineDelegateMiddleware(
                 engine,
-                sessionLookup,
                 scope
             ),
             CreateEngineSessionMiddleware(
                 engine,
-                sessionLookup,
                 scope
             ),
-            LinkingMiddleware(scope, sessionLookup),
+            LinkingMiddleware(scope),
             TabsRemovedMiddleware(scope),
             SuspendMiddleware(scope),
             WebExtensionMiddleware(),
@@ -67,7 +63,6 @@ object EngineMiddleware {
 internal fun getOrCreateEngineSession(
     engine: Engine,
     logger: Logger,
-    sessionLookup: (String) -> Session?,
     store: Store<BrowserState, BrowserAction>,
     tabId: String
 ): EngineSession? {
@@ -87,23 +82,16 @@ internal fun getOrCreateEngineSession(
         return it
     }
 
-    return createEngineSession(engine, logger, sessionLookup, store, tab)
+    return createEngineSession(engine, logger, store, tab)
 }
 
 @MainThread
 private fun createEngineSession(
     engine: Engine,
     logger: Logger,
-    sessionLookup: (String) -> Session?,
     store: Store<BrowserState, BrowserAction>,
     tab: SessionState
-): EngineSession? {
-    val session = sessionLookup(tab.id)
-    if (session == null) {
-        logger.error("Requested creation of EngineSession without matching Session (${tab.id})")
-        return null
-    }
-
+): EngineSession {
     val engineSession = engine.createSession(tab.content.private, tab.contextId)
     logger.debug("Created engine session for tab ${tab.id}")
 

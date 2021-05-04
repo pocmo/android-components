@@ -2,12 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.browser.session.engine.middleware
+package mozilla.components.browser.state.engine.middleware
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.engine.getOrCreateEngineSession
+import mozilla.components.browser.state.engine.getOrCreateEngineSession
 import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.selector.allTabs
@@ -27,7 +26,6 @@ import mozilla.components.support.base.log.logger.Logger
  */
 internal class EngineDelegateMiddleware(
     private val engine: Engine,
-    private val sessionLookup: (String) -> Session?,
     private val scope: CoroutineScope
 ) : Middleware<BrowserState, BrowserAction> {
     private val logger = Logger("EngineSessionMiddleware")
@@ -75,7 +73,6 @@ internal class EngineDelegateMiddleware(
         getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )?.loadUrl(
@@ -93,7 +90,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -107,7 +103,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -121,7 +116,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -135,7 +129,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -149,7 +142,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -163,7 +155,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -177,7 +168,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
@@ -191,7 +181,6 @@ internal class EngineDelegateMiddleware(
         val engineSession = getOrCreateEngineSession(
             engine,
             logger,
-            sessionLookup,
             store,
             tabId = action.sessionId
         )
