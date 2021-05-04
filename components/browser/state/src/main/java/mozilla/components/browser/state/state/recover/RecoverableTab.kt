@@ -6,6 +6,7 @@ package mozilla.components.browser.state.state.recover
 
 import mozilla.components.browser.state.state.ReaderState
 import mozilla.components.browser.state.state.TabSessionState
+import mozilla.components.browser.state.state.createTab
 import mozilla.components.concept.engine.EngineSessionState
 
 /**
@@ -54,6 +55,26 @@ fun TabSessionState.toRecoverableTab() = RecoverableTab(
 )
 
 /**
+ * Creates a [TabSessionState] from this [RecoverableTab].
+ */
+fun RecoverableTab.toTabSessionState() = createTab(
+    id = id,
+    url = url,
+    parentId = parentId,
+    title = title,
+    contextId = contextId,
+    engineSessionState = state,
+    readerState = readerState,
+    lastAccess = lastAccess,
+    private = private
+)
+
+/**
  * Creates a list of [RecoverableTab]s from a List of [TabSessionState]s.
  */
 fun List<TabSessionState>.toRecoverableTabs() = map { it.toRecoverableTab() }
+
+/**
+ * Creates a list of [TabSessionState]s from a List of [TabSessionState]s.
+ */
+fun List<RecoverableTab>.toTabSessionStates() = map { it.toTabSessionState() }
