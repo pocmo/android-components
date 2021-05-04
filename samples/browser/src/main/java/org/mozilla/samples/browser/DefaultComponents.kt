@@ -153,7 +153,7 @@ open class DefaultComponents(private val applicationContext: Context) {
             DownloadMiddleware(applicationContext, DownloadService::class.java),
             ReaderViewMiddleware(),
             ThumbnailsMiddleware(thumbnailStorage),
-            UndoMiddleware(::sessionManagerLookup),
+            UndoMiddleware(),
             RegionMiddleware(
                 applicationContext,
                 LocationService.default()
@@ -166,10 +166,6 @@ open class DefaultComponents(private val applicationContext: Context) {
     }
 
     val customTabsStore by lazy { CustomTabsServiceStore() }
-
-    private fun sessionManagerLookup(): SessionManager {
-        return sessionManager
-    }
 
     val sessionManager by lazy {
         SessionManager(engine, store).apply {
