@@ -22,9 +22,8 @@ import mozilla.components.browser.menu.item.BrowserMenuHighlightableItem
 import mozilla.components.browser.menu.item.BrowserMenuImageText
 import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.menu.item.SimpleBrowserMenuItem
-import mozilla.components.browser.session.SessionManager
-import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.session.storage.SessionStorage
+import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.storage.sync.PlacesHistoryStorage
@@ -50,7 +49,6 @@ import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
 import mozilla.components.feature.downloads.DownloadMiddleware
 import mozilla.components.feature.downloads.DownloadsUseCases
 import mozilla.components.feature.intent.processing.TabIntentProcessor
-import mozilla.components.feature.media.MediaSessionFeature
 import mozilla.components.feature.media.middleware.RecordingDevicesMiddleware
 import mozilla.components.feature.prompts.PromptMiddleware
 import mozilla.components.feature.pwa.ManifestStorage
@@ -70,7 +68,6 @@ import mozilla.components.feature.session.middleware.undo.UndoMiddleware
 import mozilla.components.feature.sitepermissions.SitePermissionsStorage
 import mozilla.components.feature.tabs.CustomTabsUseCases
 import mozilla.components.feature.tabs.TabsUseCases
-import mozilla.components.feature.webnotifications.WebNotificationFeature
 import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.CrashReporter
 import mozilla.components.lib.crash.service.CrashReporterService
@@ -85,7 +82,6 @@ import org.mozilla.samples.browser.autofill.AutofillUnlockActivity
 import org.mozilla.samples.browser.downloads.DownloadService
 import org.mozilla.samples.browser.ext.components
 import org.mozilla.samples.browser.integration.FindInPageIntegration
-import org.mozilla.samples.browser.media.MediaSessionService
 import org.mozilla.samples.browser.request.SampleUrlEncodedRequestInterceptor
 import org.mozilla.samples.browser.storage.DummyLoginsStorage
 import java.util.concurrent.TimeUnit
@@ -166,17 +162,6 @@ open class DefaultComponents(private val applicationContext: Context) {
     }
 
     val customTabsStore by lazy { CustomTabsServiceStore() }
-
-    val sessionManager by lazy {
-        SessionManager(engine, store).apply {
-            icons.install(engine, store)
-
-            WebNotificationFeature(applicationContext, engine, icons, R.drawable.ic_notification,
-                permissionStorage, BrowserActivity::class.java)
-
-            MediaSessionFeature(applicationContext, MediaSessionService::class.java, store).start()
-        }
-    }
 
     val sessionUseCases by lazy { SessionUseCases(store) }
 
@@ -306,22 +291,22 @@ open class DefaultComponents(private val applicationContext: Context) {
                     webAppUseCases.addToHomescreen()
                 }
             }.apply {
-                visible = { webAppUseCases.isPinningSupported() && sessionManager.selectedSession != null }
+                visible = { webAppUseCases.isPinningSupported() && store.state.selectedTabId != null }
             }
         )
 
         items.add(
             SimpleBrowserMenuItem("Open in App") {
                 val getRedirect = appLinksUseCases.appLinkRedirect
-                sessionManager.selectedSession?.let {
-                    val redirect = getRedirect.invoke(it.url)
+                store.state.selectedTab?.let {
+                    val redirect = getRedirect.invoke(it.content.url)
                     redirect.appIntent?.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     appLinksUseCases.openAppLink.invoke(redirect.appIntent)
                 }
             }.apply {
                 visible = {
-                    sessionManager.selectedSession?.let {
-                        appLinksUseCases.appLinkRedirect(it.url).hasExternalApp()
+                    store.state.selectedTab?.let {
+                        appLinksUseCases.appLinkRedirect(it.content.url).hasExternalApp()
                     } ?: false
                 }
             }
@@ -379,14 +364,14 @@ open class DefaultComponents(private val applicationContext: Context) {
             primaryContentDescription = "Refresh",
             primaryImageTintResource = R.color.photonBlue90,
             isInPrimaryState = {
-                sessionManager.selectedSession?.loading == false
+                store.state.selectedTab?.content?.loading == false
             },
             secondaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_stop,
             secondaryContentDescription = "Stop",
             secondaryImageTintResource = R.color.photonBlue90,
             disableInSecondaryState = false
         ) {
-            if (sessionManager.selectedSession?.loading == true) {
+            if (store.state.selectedTab?.content?.loading == true) {
                 sessionUseCases.stopLoading()
             } else {
                 sessionUseCases.reload()
