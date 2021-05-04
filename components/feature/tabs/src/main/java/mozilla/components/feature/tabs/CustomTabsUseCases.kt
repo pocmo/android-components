@@ -4,10 +4,15 @@
 
 package mozilla.components.feature.tabs
 
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.SessionManager
+import android.media.session.PlaybackState
+import mozilla.components.browser.state.action.CustomTabListAction
+import mozilla.components.browser.state.action.TabListAction
+import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.CustomTabConfig
 import mozilla.components.browser.state.state.SessionState
+import mozilla.components.browser.state.state.createCustomTab
+import mozilla.components.browser.state.state.createTab
+import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.manifest.WebAppManifest
 import mozilla.components.feature.session.SessionUseCases
@@ -16,14 +21,14 @@ import mozilla.components.feature.session.SessionUseCases
  * UseCases for custom tabs.
  */
 class CustomTabsUseCases(
-    sessionManager: SessionManager,
+    store: BrowserStore,
     loadUrlUseCase: SessionUseCases.DefaultLoadUrlUseCase
 ) {
     /**
      * Use case for adding a new custom tab.
      */
     class AddCustomTabUseCase(
-        private val sessionManager: SessionManager,
+        private val store: BrowserStore,
         private val loadUrlUseCase: SessionUseCases.DefaultLoadUrlUseCase
     ) {
         /**
@@ -36,14 +41,18 @@ class CustomTabsUseCases(
             additionalHeaders: Map<String, String>? = null,
             source: SessionState.Source = SessionState.Source.CUSTOM_TAB
         ): String {
-            val session = Session(url, private = private, source = source)
-            session.customTabConfig = customTabConfig
+            val tab = createCustomTab(
+                url = url,
+                private = private,
+                source = source,
+                config = customTabConfig
+            )
 
-            sessionManager.add(session)
+            store.dispatch(CustomTabListAction.AddCustomTabAction(tab))
 
-            loadUrlUseCase(url, session.id, EngineSession.LoadUrlFlags.external(), additionalHeaders)
+            loadUrlUseCase(url, tab.id, EngineSession.LoadUrlFlags.external(), additionalHeaders)
 
-            return session.id
+            return tab.id
         }
     }
 
@@ -51,7 +60,7 @@ class CustomTabsUseCases(
      * Use case for adding a new Web App tab.
      */
     class AddWebAppTabUseCase(
-        private val sessionManager: SessionManager,
+        private val store: BrowserStore,
         private val loadUrlUseCase: SessionUseCases.DefaultLoadUrlUseCase
     ) {
         /**
@@ -63,15 +72,18 @@ class CustomTabsUseCases(
             customTabConfig: CustomTabConfig,
             webAppManifest: WebAppManifest
         ): String {
-            val session = Session(url, source = source)
-            session.customTabConfig = customTabConfig
-            session.webAppManifest = webAppManifest
+            val tab = createCustomTab(
+                url = url,
+                source = source,
+                config = customTabConfig,
+                webAppManifest = webAppManifest
+            )
 
-            sessionManager.add(session, selected = false)
+            store.dispatch(CustomTabListAction.AddCustomTabAction(tab))
 
-            loadUrlUseCase(url, session.id, EngineSession.LoadUrlFlags.external())
+            loadUrlUseCase(url, tab.id, EngineSession.LoadUrlFlags.external())
 
-            return session.id
+            return tab.id
         }
     }
 
@@ -79,15 +91,15 @@ class CustomTabsUseCases(
      * Use case for removing a custom tab.
      */
     class RemoveCustomTabUseCase(
-        private val sessionManager: SessionManager
+        private val store: BrowserStore
     ) {
         /**
          * Removes the custom tab with the given [customTabId].
          */
         operator fun invoke(customTabId: String): Boolean {
-            val session = sessionManager.findSessionById(customTabId)
-            if (session?.customTabConfig != null) {
-                sessionManager.remove(session)
+            val tab = store.state.findCustomTab(customTabId)
+            if (tab != null) {
+                store.dispatch(CustomTabListAction.RemoveCustomTabAction(tab.id))
                 return true
             }
             return false
@@ -98,7 +110,7 @@ class CustomTabsUseCases(
      * Use case for migrating a custom tab to a regular tab.
      */
     class MigrateCustomTabUseCase(
-        private val sessionManager: SessionManager
+        private val store: BrowserStore
     ) {
         /**
          * Migrates the custom tab with the given [customTabId] to a regular
@@ -108,19 +120,18 @@ class CustomTabsUseCases(
          * @param select whether or not to select the regular tab, defaults to true.
          */
         operator fun invoke(customTabId: String, select: Boolean = true) {
-            val customTabSession = sessionManager.findSessionById(customTabId)
-            customTabSession?.let {
-                it.customTabConfig = null
+            store.dispatch(
+                CustomTabListAction.TurnCustomTabIntoNormalTabAction(customTabId)
+            )
 
-                if (select) {
-                    sessionManager.select(it)
-                }
+            if (select) {
+                store.dispatch(TabListAction.SelectTabAction(customTabId))
             }
         }
     }
 
-    val add by lazy { AddCustomTabUseCase(sessionManager, loadUrlUseCase) }
-    val remove by lazy { RemoveCustomTabUseCase(sessionManager) }
-    val migrate by lazy { MigrateCustomTabUseCase(sessionManager) }
-    val addWebApp by lazy { AddWebAppTabUseCase(sessionManager, loadUrlUseCase) }
+    val add by lazy { AddCustomTabUseCase(store, loadUrlUseCase) }
+    val remove by lazy { RemoveCustomTabUseCase(store) }
+    val migrate by lazy { MigrateCustomTabUseCase(store) }
+    val addWebApp by lazy { AddWebAppTabUseCase(store, loadUrlUseCase) }
 }

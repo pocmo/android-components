@@ -180,7 +180,7 @@ open class DefaultComponents(private val applicationContext: Context) {
 
     val sessionUseCases by lazy { SessionUseCases(store) }
 
-    val customTabsUseCases by lazy { CustomTabsUseCases(sessionManager, sessionUseCases.loadUrl) }
+    val customTabsUseCases by lazy { CustomTabsUseCases(store, sessionUseCases.loadUrl) }
 
     // Addons
     val addonManager by lazy {
