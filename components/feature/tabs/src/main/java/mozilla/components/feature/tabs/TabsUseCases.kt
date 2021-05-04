@@ -426,6 +426,8 @@ class TabsUseCases(
     val selectTab: SelectTabUseCase by lazy { DefaultSelectTabUseCase(store) }
     val removeTab: RemoveTabUseCase by lazy { DefaultRemoveTabUseCase(store) }
     val addTab: AddNewTabUseCase by lazy { AddNewTabUseCase(store) }
+    @Deprecated("Use addTab and the private flag")
+    @Suppress("DEPRECATION")
     val addPrivateTab: AddNewPrivateTabUseCase by lazy { AddNewPrivateTabUseCase(store) }
     val removeAllTabs: RemoveAllTabsUseCase by lazy { RemoveAllTabsUseCase(store) }
     val removeTabs: RemoveTabsUseCase by lazy { RemoveTabsUseCase(store) }

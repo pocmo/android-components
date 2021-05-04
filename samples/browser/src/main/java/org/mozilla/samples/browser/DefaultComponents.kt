@@ -182,7 +182,7 @@ open class DefaultComponents(private val applicationContext: Context) {
         }
     }
 
-    val sessionUseCases by lazy { SessionUseCases(store, sessionManager) }
+    val sessionUseCases by lazy { SessionUseCases(store) }
 
     val customTabsUseCases by lazy { CustomTabsUseCases(sessionManager, sessionUseCases.loadUrl) }
 
@@ -251,9 +251,9 @@ open class DefaultComponents(private val applicationContext: Context) {
     }
     val externalAppIntentProcessors by lazy {
         listOf(
-            WebAppIntentProcessor(store, tabsUseCases.addTab, sessionUseCases.loadUrl, webAppManifestStorage),
+            WebAppIntentProcessor(store, customTabsUseCases.addWebApp, sessionUseCases.loadUrl, webAppManifestStorage),
             TrustedWebActivityIntentProcessor(
-                tabsUseCases.addTab,
+                customTabsUseCases.add,
                 applicationContext.packageManager,
                 relationChecker,
                 customTabsStore
@@ -332,11 +332,6 @@ open class DefaultComponents(private val applicationContext: Context) {
         )
 
         items.add(
-            SimpleBrowserMenuItem("Clear Data") {
-                sessionUseCases.clearData()
-            }
-        )
-        items.add(
             BrowserMenuCheckbox("Request desktop site", {
                 store.state.selectedTab?.content?.desktopMode == true
             }) { checked ->
@@ -409,7 +404,7 @@ open class DefaultComponents(private val applicationContext: Context) {
         ShippedDomainsProvider().also { it.initialize(applicationContext) }
     }
 
-    val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store, sessionManager) }
+    val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
     val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store) }
     val contextMenuUseCases: ContextMenuUseCases by lazy { ContextMenuUseCases(store) }
 

@@ -9,6 +9,7 @@ import mozilla.components.browser.session.SessionManager
 import mozilla.components.browser.state.state.CustomTabConfig
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.EngineSession
+import mozilla.components.concept.engine.manifest.WebAppManifest
 import mozilla.components.feature.session.SessionUseCases
 
 /**
@@ -31,15 +32,44 @@ class CustomTabsUseCases(
         operator fun invoke(
             url: String,
             customTabConfig: CustomTabConfig,
-            private: Boolean,
-            additionalHeaders: Map<String, String>? = null
+            private: Boolean = false,
+            additionalHeaders: Map<String, String>? = null,
+            source: SessionState.Source = SessionState.Source.CUSTOM_TAB
         ): String {
-            val session = Session(url, private = private, source = SessionState.Source.CUSTOM_TAB)
+            val session = Session(url, private = private, source = source)
             session.customTabConfig = customTabConfig
 
             sessionManager.add(session)
 
             loadUrlUseCase(url, session.id, EngineSession.LoadUrlFlags.external(), additionalHeaders)
+
+            return session.id
+        }
+    }
+
+    /**
+     * Use case for adding a new Web App tab.
+     */
+    class AddWebAppTabUseCase(
+        private val sessionManager: SessionManager,
+        private val loadUrlUseCase: SessionUseCases.DefaultLoadUrlUseCase
+    ) {
+        /**
+         * Adds a new web app tab with the given manifest.
+         */
+        operator fun invoke(
+            url: String,
+            source: SessionState.Source = SessionState.Source.CUSTOM_TAB,
+            customTabConfig: CustomTabConfig,
+            webAppManifest: WebAppManifest
+        ): String {
+            val session = Session(url, source = source)
+            session.customTabConfig = customTabConfig
+            session.webAppManifest = webAppManifest
+
+            sessionManager.add(session, selected = false)
+
+            loadUrlUseCase(url, session.id, EngineSession.LoadUrlFlags.external())
 
             return session.id
         }
@@ -92,4 +122,5 @@ class CustomTabsUseCases(
     val add by lazy { AddCustomTabUseCase(sessionManager, loadUrlUseCase) }
     val remove by lazy { RemoveCustomTabUseCase(sessionManager) }
     val migrate by lazy { MigrateCustomTabUseCase(sessionManager) }
+    val addWebApp by lazy { AddWebAppTabUseCase(sessionManager, loadUrlUseCase) }
 }
