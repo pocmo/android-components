@@ -4,24 +4,32 @@
 
 package mozilla.components.feature.tabs
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.SessionManager
+import kotlinx.coroutines.test.TestCoroutineScope
 import mozilla.components.browser.session.storage.SessionStorage
 import mozilla.components.browser.state.action.EngineAction
+import mozilla.components.browser.state.action.TabListAction
+import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.selector.selectedTab
+import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.state.SearchState
 import mozilla.components.browser.state.state.SessionState.Source
 import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.state.recover.RecoverableTab
 import mozilla.components.browser.state.state.recover.toRecoverableTab
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSession.LoadUrlFlags
 import mozilla.components.concept.engine.EngineSessionState
+import mozilla.components.support.test.any
 import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.ext.joinBlocking
+import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.rule.MainCoroutineRule
 import mozilla.components.support.test.whenever
@@ -30,11 +38,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.anyBoolean
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 const val DAY_IN_MS = 24 * 60 * 60 * 1000L
@@ -42,153 +55,139 @@ const val DAY_IN_MS = 24 * 60 * 60 * 1000L
 class TabsUseCasesTest {
     private val dispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher()
 
+    private lateinit var store: BrowserStore
+    private lateinit var tabsUseCases: TabsUseCases
+    private lateinit var engine: Engine
+    private lateinit var engineSession: EngineSession
+
     @get:Rule
     val coroutinesTestRule = MainCoroutineRule(dispatcher)
 
-    @Test
-    fun `SelectTabUseCase - session will be selected in session manager`() {
-        val sessionManager: SessionManager = mock()
-        val useCases = TabsUseCases(BrowserStore(), sessionManager)
+    @Before
+    fun setup() {
+        engineSession = mock()
+        engine = mock()
 
-        val session = Session("A")
-        doReturn(session).`when`(sessionManager).findSessionById(session.id)
-
-        useCases.selectTab(session.id)
-
-        verify(sessionManager).select(session)
+        whenever(engine.createSession(anyBoolean(), any())).thenReturn(engineSession)
+        store = BrowserStore(
+            middleware = EngineMiddleware.create(
+                engine = engine
+            )
+        )
+        tabsUseCases = TabsUseCases(store)
     }
 
     @Test
-    fun `RemoveTabUseCase - session will be removed in session manager`() {
-        val sessionManager: SessionManager = mock()
-        val useCases = TabsUseCases(BrowserStore(), sessionManager)
+    fun `SelectTabUseCase - tab is marked as selected in store`() {
+        val tab = createTab("https://mozilla.org")
+        val otherTab = createTab("https://firefox.com")
+        store.dispatch(TabListAction.AddTabAction(otherTab)).joinBlocking()
+        store.dispatch(TabListAction.AddTabAction(tab)).joinBlocking()
 
-        val session = Session("A")
-        doReturn(session).`when`(sessionManager).findSessionById(session.id)
+        assertEquals(otherTab.id, store.state.selectedTabId)
+        assertEquals(otherTab, store.state.selectedTab)
 
-        useCases.removeTab(session.id)
-
-        verify(sessionManager).remove(session, false)
+        tabsUseCases.selectTab(tab.id)
+        store.waitUntilIdle()
+        assertEquals(tab.id, store.state.selectedTabId)
+        assertEquals(tab, store.state.selectedTab)
     }
 
     @Test
-    fun `RemoveTabUseCase - session can be removed by ID`() {
-        val sessionManager: SessionManager = mock()
-        val session = Session(id = "test", initialUrl = "http://mozilla.org")
-        whenever(sessionManager.findSessionById(session.id)).thenReturn(session)
+    fun `RemoveTabUseCase - session will be removed from store`() {
+        val tab = createTab("https://mozilla.org")
+        store.dispatch(TabListAction.AddTabAction(tab)).joinBlocking()
+        assertEquals(1, store.state.tabs.size)
 
-        val useCases = TabsUseCases(BrowserStore(), sessionManager)
-        useCases.removeTab(session.id)
-        verify(sessionManager).remove(session, false)
+        tabsUseCases.removeTab(tab.id)
+        store.waitUntilIdle()
+        assertEquals(0, store.state.tabs.size)
     }
 
     @Test
     fun `RemoveTabUseCase - remove by ID and select parent if it exists`() {
-        val sessionManager: SessionManager = mock()
-        val session = Session(id = "test", initialUrl = "http://mozilla.org")
-        whenever(sessionManager.findSessionById(session.id)).thenReturn(session)
+        val parentTab = createTab("https://firefox.com")
+        store.dispatch(TabListAction.AddTabAction(parentTab)).joinBlocking()
 
-        val useCases = TabsUseCases(BrowserStore(), sessionManager)
-        useCases.removeTab(session.id, selectParentIfExists = true)
-        verify(sessionManager).remove(session, true)
+        val tab = createTab("https://mozilla.org", parent = parentTab)
+        store.dispatch(TabListAction.AddTabAction(tab, select = true)).joinBlocking()
+        assertEquals(2, store.state.tabs.size)
+        assertEquals(tab.id, store.state.selectedTabId)
+
+        tabsUseCases.removeTab(tab.id, selectParentIfExists = true)
+        store.waitUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals(parentTab.id, store.state.selectedTabId)
     }
 
     @Test
     fun `RemoveTabsUseCase - list of sessions can be removed`() {
-        val sessionManager = spy(SessionManager(mock()))
-        val useCases = TabsUseCases(BrowserStore(), sessionManager)
+        val tab = createTab("https://mozilla.org")
+        val otherTab = createTab("https://firefox.com")
+        store.dispatch(TabListAction.AddTabAction(otherTab)).joinBlocking()
+        store.dispatch(TabListAction.AddTabAction(tab)).joinBlocking()
 
-        val session = Session(id = "test", initialUrl = "http://mozilla.org")
-        val session2 = Session(id = "test2", initialUrl = "http://pocket.com")
-        val session3 = Session(id = "test3", initialUrl = "http://firefox.com")
+        assertEquals(otherTab.id, store.state.selectedTabId)
+        assertEquals(otherTab, store.state.selectedTab)
 
-        sessionManager.add(listOf(session, session2, session3))
-        assertEquals(3, sessionManager.size)
-
-        useCases.removeTabs.invoke(listOf(session.id, session2.id))
-
-        verify(sessionManager).removeListOfSessions(listOf(session.id, session2.id))
-
-        assertEquals(1, sessionManager.size)
+        tabsUseCases.removeTabs(listOf(tab.id, otherTab.id))
+        store.waitUntilIdle()
+        assertEquals(0, store.state.tabs.size)
     }
 
     @Test
-    fun `AddNewTabUseCase - session will be added to session manager`() {
-        val sessionManager = spy(SessionManager(mock()))
-        val store: BrowserStore = mock()
-        val useCases = TabsUseCases(store, sessionManager)
+    fun `AddNewTabUseCase - session will be added to store`() {
+        tabsUseCases.addTab("https://www.mozilla.org")
 
-        assertEquals(0, sessionManager.size)
-
-        useCases.addTab("https://www.mozilla.org")
-
-        assertEquals(1, sessionManager.size)
-        assertEquals("https://www.mozilla.org", sessionManager.selectedSessionOrThrow.url)
-        assertEquals(Source.NEW_TAB, sessionManager.selectedSessionOrThrow.source)
-        assertFalse(sessionManager.selectedSessionOrThrow.private)
-
-        val actionCaptor = argumentCaptor<EngineAction.LoadUrlAction>()
-        verify(store).dispatch(actionCaptor.capture())
-        assertEquals("https://www.mozilla.org", actionCaptor.value.url)
+        store.waitUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals("https://www.mozilla.org", store.state.tabs[0].content.url)
+        assertFalse(store.state.tabs[0].content.private)
     }
 
     @Test
-    fun `AddNewPrivateTabUseCase - private session will be added to session manager`() {
-        val sessionManager = spy(SessionManager(mock()))
-        val store: BrowserStore = mock()
-        val useCases = TabsUseCases(store, sessionManager)
+    fun `AddNewTabUseCase - private session will be added to store`() {
+        tabsUseCases.addTab("https://www.mozilla.org", private = true)
 
-        assertEquals(0, sessionManager.size)
-
-        useCases.addPrivateTab("https://www.mozilla.org")
-
-        assertEquals(1, sessionManager.size)
-        assertEquals("https://www.mozilla.org", sessionManager.selectedSessionOrThrow.url)
-        assertEquals(Source.NEW_TAB, sessionManager.selectedSessionOrThrow.source)
-        assertTrue(sessionManager.selectedSessionOrThrow.private)
-
-        val actionCaptor = argumentCaptor<EngineAction.LoadUrlAction>()
-        verify(store).dispatch(actionCaptor.capture())
-        assertEquals("https://www.mozilla.org", actionCaptor.value.url)
+        store.waitUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals("https://www.mozilla.org", store.state.tabs[0].content.url)
+        assertTrue(store.state.tabs[0].content.private)
     }
 
     @Test
     fun `AddNewTabUseCase will not load URL if flag is set to false`() {
-        val sessionManager = spy(SessionManager(mock()))
-        val store: BrowserStore = mock()
-        val useCases = TabsUseCases(store, sessionManager)
+        tabsUseCases.addTab("https://www.mozilla.org", startLoading = false)
 
-        useCases.addTab("https://www.mozilla.org", startLoading = false)
-
-        val actionCaptor = argumentCaptor<EngineAction.LoadUrlAction>()
-        verify(store, never()).dispatch(actionCaptor.capture())
+        store.waitUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals("https://www.mozilla.org", store.state.tabs[0].content.url)
+        verify(engineSession, never()).loadUrl(anyString(), any(), any(), any())
     }
 
     @Test
     fun `AddNewTabUseCase will load URL if flag is set to true`() {
-        val sessionManager: SessionManager = mock()
-        val store: BrowserStore = mock()
-        val useCases = TabsUseCases(store, sessionManager)
+        tabsUseCases.addTab("https://www.mozilla.org", startLoading = true)
 
-        useCases.addTab("https://www.mozilla.org", startLoading = true)
-        val actionCaptor = argumentCaptor<EngineAction.LoadUrlAction>()
-        verify(store).dispatch(actionCaptor.capture())
-        assertEquals("https://www.mozilla.org", actionCaptor.value.url)
+        store.waitUntilIdle()
+        dispatcher.advanceUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals("https://www.mozilla.org", store.state.tabs[0].content.url)
+        verify(engineSession, times(1)).loadUrl("https://www.mozilla.org")
     }
 
     @Test
     fun `AddNewTabUseCase forwards load flags to engine`() {
-        val sessionManager: SessionManager = mock()
-        val store: BrowserStore = mock()
-        val useCases = TabsUseCases(store, sessionManager)
+        tabsUseCases.addTab.invoke("https://www.mozilla.org", flags = LoadUrlFlags.external(), startLoading = true)
 
-        useCases.addTab.invoke("https://www.mozilla.org", LoadUrlFlags.select(LoadUrlFlags.EXTERNAL))
-        val actionCaptor = argumentCaptor<EngineAction.LoadUrlAction>()
-        verify(store).dispatch(actionCaptor.capture())
-        assertEquals("https://www.mozilla.org", actionCaptor.value.url)
-        assertEquals(LoadUrlFlags.select(LoadUrlFlags.EXTERNAL), actionCaptor.value.flags)
+        store.waitUntilIdle()
+        dispatcher.advanceUntilIdle()
+        assertEquals(1, store.state.tabs.size)
+        assertEquals("https://www.mozilla.org", store.state.tabs[0].content.url)
+        verify(engineSession, times(1)).loadUrl("https://www.mozilla.org", null, LoadUrlFlags.external(), null)
     }
 
+    /*
     @Test
     fun `AddNewTabUseCase uses provided engine session`() {
         val store = BrowserStore()
@@ -463,5 +462,5 @@ class TabsUseCasesTest {
         assertEquals(2, store.state.tabs.size)
         assertEquals("work", store.state.tabs[0].contextId)
         assertEquals("work", store.state.tabs[1].contextId)
-    }
+    }*/
 }
