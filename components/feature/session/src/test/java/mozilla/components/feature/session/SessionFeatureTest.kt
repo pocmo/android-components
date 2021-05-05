@@ -365,7 +365,6 @@ class SessionFeatureTest {
         ),
         middleware = EngineMiddleware.create(
             engine = mock(),
-            sessionLookup = { null },
             scope = scope
         )
     )
