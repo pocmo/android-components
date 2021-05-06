@@ -20,6 +20,7 @@ import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.state.recover.RecoverableTab
 import mozilla.components.browser.state.state.recover.toTabSessionStates
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSession.LoadUrlFlags
 import mozilla.components.feature.session.SessionUseCases.LoadUrlUseCase
@@ -28,7 +29,8 @@ import mozilla.components.feature.session.SessionUseCases.LoadUrlUseCase
  * Contains use cases related to the tabs feature.
  */
 class TabsUseCases(
-    store: BrowserStore
+    store: BrowserStore,
+    engine: Engine
 ) {
     /**
      * Contract for use cases that select a tab.
@@ -109,7 +111,8 @@ class TabsUseCases(
     }
 
     class AddNewTabUseCase internal constructor(
-        private val store: BrowserStore
+        private val store: BrowserStore,
+        private val engine: Engine
     ) : LoadUrlUseCase {
 
         /**
@@ -162,10 +165,14 @@ class TabsUseCases(
             // If an engine session is specified then loading will have already started when linking
             // the tab to its engine session. Otherwise we ask to load the URL here.
             if (startLoading && engineSession == null) {
-                store.dispatch(EngineAction.LoadUrlAction(
+                val parent = parentId?.let { store.state.findTab(it) }
+
+                val session = engine.createSession(private = private, contextId = contextId)
+                session.loadUrl(url, parent = parent?.engineState?.engineSession, flags = flags)
+                store.dispatch(EngineAction.LinkEngineSessionAction(
                     tab.id,
-                    url,
-                    flags
+                    session,
+                    skipLoading = true
                 ))
             }
 
