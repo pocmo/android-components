@@ -4,35 +4,47 @@
 
 package mozilla.components.feature.tabs
 
+import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.state.createCustomTab
+import mozilla.components.browser.state.state.createTab
+import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.mock
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.never
-import org.mockito.Mockito.verify
 
 class CustomTabsUseCasesTest {
-
-    /*
     @Test
     fun `MigrateCustomTabUseCase - turns custom tab into regular tab and selects it`() {
-        val sessionManager: SessionManager = mock()
-        val useCases = CustomTabsUseCases(sessionManager, mock())
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab("https://getpocket.com", id = "pocket")
+                ),
+                customTabs = listOf(
+                    createCustomTab("https://www.mozilla.org", id = "mozilla"),
+                    createCustomTab("https://www.firefox.com", id = "firefox")
+                ),
+                selectedTabId = "pocket"
+            )
+        )
 
-        val session1 = Session("CustomTabSession1")
-        session1.customTabConfig = mock()
-        doReturn(session1).`when`(sessionManager).findSessionById(session1.id)
+        val useCases = CustomTabsUseCases(store, mock())
 
-        useCases.migrate(session1.id, select = false)
-        assertNull(session1.customTabConfig)
-        verify(sessionManager, never()).select(session1)
+        useCases.migrate("mozilla", select = false)
+        store.waitUntilIdle()
 
-        val session2 = Session("CustomTabSession2")
-        session2.customTabConfig = mock()
-        doReturn(session2).`when`(sessionManager).findSessionById(session2.id)
+        assertEquals(1, store.state.customTabs.size)
+        assertEquals(2, store.state.tabs.size)
+        assertEquals("mozilla", store.state.tabs[1].id)
+        assertEquals("pocket", store.state.selectedTabId)
 
-        useCases.migrate(session2.id)
-        assertNull(session2.customTabConfig)
-        verify(sessionManager).select(session2)
-    }*/
+        useCases.migrate("firefox", select = true)
+        store.waitUntilIdle()
+
+        assertEquals(0, store.state.customTabs.size)
+        assertEquals(3, store.state.tabs.size)
+        assertEquals("firefox", store.state.tabs[2].id)
+        assertEquals("firefox", store.state.selectedTabId)
+    }
 }
