@@ -103,7 +103,11 @@ private fun createEngineSession(
     }
 
     store.dispatch(
-        EngineAction.LinkEngineSessionAction(tab.id, engineSession, skipLoading = skipLoading)
+        EngineAction.LinkEngineSessionAction(
+            tab.id,
+            engineSession,
+            skipLoading = skipLoading
+        )
     )
 
     return engineSession

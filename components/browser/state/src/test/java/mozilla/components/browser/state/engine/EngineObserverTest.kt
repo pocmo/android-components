@@ -10,18 +10,20 @@ import android.view.WindowManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.test.runBlockingTest
-import mozilla.components.browser.session.Session
-import mozilla.components.browser.session.SessionManager
-import mozilla.components.browser.session.ext.toTabSessionState
 import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.CrashAction
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.action.TrackingProtectionAction
 import mozilla.components.browser.state.selector.findTab
+import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.AppIntentState
 import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.state.LoadRequestState
+import mozilla.components.browser.state.state.MediaSessionState
+import mozilla.components.browser.state.state.SecurityInfoState
 import mozilla.components.browser.state.state.content.FindResultState
+import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineSessionState
@@ -35,7 +37,6 @@ import mozilla.components.concept.engine.permission.PermissionRequest
 import mozilla.components.concept.engine.prompt.PromptRequest
 import mozilla.components.concept.engine.window.WindowRequest
 import mozilla.components.concept.fetch.Response
-import mozilla.components.support.test.eq
 import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.middleware.CaptureActionsMiddleware
 import mozilla.components.support.test.mock
@@ -48,20 +49,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
 
 @RunWith(AndroidJUnit4::class)
 class EngineObserverTest {
-
     @Test
     fun engineSessionObserver() {
-        val session = Session("")
         val engineSession = object : EngineSession() {
-            override val settings: Settings
-                get() = mock(Settings::class.java)
-
+            override val settings: Settings = mock()
             override fun goBack() {}
             override fun goForward() {}
             override fun goToHistoryIndex(index: Int) {}
@@ -95,17 +91,21 @@ class EngineObserverTest {
                 notifyObservers { onNavigationStateChange(true, true) }
             }
         }
-        val store = BrowserStore()
-        store.dispatch(TabListAction.AddTabAction(session.toTabSessionState()))
-        engineSession.register(EngineObserver(session, store))
 
+        val store = BrowserStore()
+        store.dispatch(TabListAction.AddTabAction(createTab("https://www.mozilla.org", id = "mozilla")))
+
+        engineSession.register(EngineObserver("mozilla", store))
         engineSession.loadUrl("http://mozilla.org")
         engineSession.toggleDesktopMode(true)
-        assertEquals("http://mozilla.org", session.url)
-        assertEquals(100, session.progress)
-        assertEquals(true, session.loading)
 
-        val tab = store.state.findTab(session.id)
+        store.waitUntilIdle()
+
+        assertEquals("http://mozilla.org", store.state.selectedTab?.content?.url)
+        assertEquals(100, store.state.selectedTab?.content?.progress)
+        assertEquals(true, store.state.selectedTab?.content?.loading)
+
+        val tab = store.state.findTab("mozilla")
         assertNotNull(tab!!)
         assertTrue(tab.content.canGoForward)
         assertTrue(tab.content.canGoBack)
@@ -113,11 +113,8 @@ class EngineObserverTest {
 
     @Test
     fun engineSessionObserverWithSecurityChanges() {
-        val session = Session("")
         val engineSession = object : EngineSession() {
-            override val settings: Settings
-                get() = mock(Settings::class.java)
-
+            override val settings: Settings = mock()
             override fun goBack() {}
             override fun goForward() {}
             override fun goToHistoryIndex(index: Int) {}
@@ -145,22 +142,30 @@ class EngineObserverTest {
                 }
             }
         }
-        engineSession.register(EngineObserver(session, mock()))
+
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab("https://www.mozilla.org", id = "mozilla")
+                )
+            )
+        )
+
+        engineSession.register(EngineObserver("mozilla", store))
 
         engineSession.loadUrl("http://mozilla.org")
-        assertEquals(Session.SecurityInfo(false), session.securityInfo)
+        store.waitUntilIdle()
+        assertEquals(SecurityInfoState(secure = false), store.state.tabs[0].content.securityInfo)
 
         engineSession.loadUrl("https://mozilla.org")
-        assertEquals(Session.SecurityInfo(true, "host", "issuer"), session.securityInfo)
+        store.waitUntilIdle()
+        assertEquals(SecurityInfoState(secure = true, "host", "issuer"), store.state.tabs[0].content.securityInfo)
     }
 
     @Test
     fun engineSessionObserverWithTrackingProtection() {
-        val session = Session("")
         val engineSession = object : EngineSession() {
-            override val settings: Settings
-                get() = mock(Settings::class.java)
-
+            override val settings: Settings = mock()
             override fun goBack() {}
             override fun goForward() {}
             override fun goToHistoryIndex(index: Int) {}
@@ -182,30 +187,40 @@ class EngineObserverTest {
             override fun exitFullScreenMode() {}
             override fun purgeHistory() {}
         }
-        val observer = EngineObserver(session, mock())
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab("https://www.mozilla.org", id = "mozilla")
+                )
+            )
+        )
+        val observer = EngineObserver("mozilla", store)
         engineSession.register(observer)
 
         val tracker1 = Tracker("tracker1", emptyList())
         val tracker2 = Tracker("tracker2", emptyList())
 
         observer.onTrackerBlocked(tracker1)
-        assertEquals(listOf(tracker1), session.trackersBlocked)
+        store.waitUntilIdle()
+
+        assertEquals(listOf(tracker1), store.state.tabs[0].trackingProtection.blockedTrackers)
 
         observer.onTrackerBlocked(tracker2)
-        assertEquals(listOf(tracker1, tracker2), session.trackersBlocked)
+        store.waitUntilIdle()
+
+        assertEquals(listOf(tracker1, tracker2), store.state.tabs[0].trackingProtection.blockedTrackers)
     }
 
     @Test
     fun engineSessionObserverExcludedOnTrackingProtection() {
-        val session = Session("")
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("mozilla", store)
 
         observer.onExcludedOnTrackingProtectionChange(true)
 
         verify(store).dispatch(
             TrackingProtectionAction.ToggleExclusionListAction(
-                session.id,
+                "mozilla",
                 true
             )
         )
@@ -213,313 +228,449 @@ class EngineObserverTest {
 
     @Test
     fun engineObserverClearsWebsiteTitleIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org")
-        session.title = "Hello World"
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla",
+                        title = "Hello World"
+                    )
+                )
+            )
+        )
 
-        val observer = EngineObserver(session, mock())
+        val observer = EngineObserver("mozilla", store)
         observer.onTitleChange("Mozilla")
+        store.waitUntilIdle()
 
-        assertEquals("Mozilla", session.title)
+        assertEquals("Mozilla", store.state.tabs[0].content.title)
 
         observer.onLocationChange("https://getpocket.com")
+        store.waitUntilIdle()
 
-        assertEquals("", session.title)
+        assertEquals("", store.state.tabs[0].content.title)
     }
 
     @Test
     fun `EngineObserver does not clear title if the URL did not change`() {
-        val session = Session("https://www.mozilla.org")
-        session.title = "Hello World"
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla",
+                        title = "Hello World"
+                    )
+                )
+            )
+        )
 
-        val observer = EngineObserver(session, mock())
+        val observer = EngineObserver("mozilla", store)
+
         observer.onTitleChange("Mozilla")
+        store.waitUntilIdle()
 
-        assertEquals("Mozilla", session.title)
+        assertEquals("Mozilla", store.state.tabs[0].content.title)
 
         observer.onLocationChange("https://www.mozilla.org")
+        store.waitUntilIdle()
 
-        assertEquals("Mozilla", session.title)
+        assertEquals("Mozilla", store.state.tabs[0].content.title)
     }
 
     @Test
     fun `EngineObserver does not clear title if the URL changes hash`() {
-        val session = Session("https://www.mozilla.org")
-        session.title = "Hello World"
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla",
+                        title = "Hello World"
+                    )
+                )
+            )
+        )
 
-        val observer = EngineObserver(session, mock())
+        val observer = EngineObserver("mozilla", store)
+
         observer.onTitleChange("Mozilla")
+        store.waitUntilIdle()
 
-        assertEquals("Mozilla", session.title)
+        assertEquals("Mozilla", store.state.tabs[0].content.title)
 
         observer.onLocationChange("https://www.mozilla.org/#something")
+        store.waitUntilIdle()
 
-        assertEquals("Mozilla", session.title)
+        assertEquals("Mozilla", store.state.tabs[0].content.title)
     }
 
     @Test
     fun engineObserverClearsBlockedTrackersIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org")
-        val observer = EngineObserver(session, mock())
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
+        val observer = EngineObserver("mozilla", store)
 
         val tracker1 = Tracker("tracker1")
         val tracker2 = Tracker("tracker2")
+
         observer.onTrackerBlocked(tracker1)
         observer.onTrackerBlocked(tracker2)
-        assertEquals(listOf(tracker1, tracker2), session.trackersBlocked)
+        store.waitUntilIdle()
+
+        assertEquals(listOf(tracker1, tracker2), store.state.tabs[0].trackingProtection.blockedTrackers)
 
         observer.onLoadingStateChange(true)
-        assertEquals(emptyList<String>(), session.trackersBlocked)
+        store.waitUntilIdle()
+
+        assertEquals(emptyList<String>(), store.state.tabs[0].trackingProtection.blockedTrackers)
     }
 
     @Test
     fun engineObserverClearsLoadedTrackersIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org")
-        val observer = EngineObserver(session, mock())
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
+        val observer = EngineObserver("mozilla", store)
 
         val tracker1 = Tracker("tracker1")
         val tracker2 = Tracker("tracker2")
+
         observer.onTrackerLoaded(tracker1)
         observer.onTrackerLoaded(tracker2)
-        assertEquals(listOf(tracker1, tracker2), session.trackersLoaded)
+        store.waitUntilIdle()
+
+        assertEquals(listOf(tracker1, tracker2), store.state.tabs[0].trackingProtection.loadedTrackers)
 
         observer.onLoadingStateChange(true)
-        assertEquals(emptyList<String>(), session.trackersLoaded)
+        store.waitUntilIdle()
+
+        assertEquals(emptyList<String>(), store.state.tabs[0].trackingProtection.loadedTrackers)
     }
 
     @Test
     fun engineObserverClearsWebAppManifestIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org")
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
         val manifest = WebAppManifest(name = "Mozilla", startUrl = "https://mozilla.org")
 
-        val observer = EngineObserver(session, mock())
-        observer.onWebAppManifestLoaded(manifest)
+        val observer = EngineObserver("mozilla", store)
 
-        assertEquals(manifest, session.webAppManifest)
+        observer.onWebAppManifestLoaded(manifest)
+        store.waitUntilIdle()
+
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
 
         observer.onLocationChange("https://getpocket.com")
+        store.waitUntilIdle()
 
-        assertNull(session.webAppManifest)
+        assertNull(store.state.tabs[0].content.webAppManifest)
     }
 
     @Test
     fun engineObserverClearsContentPermissionRequestIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org", id = "sessionId")
-        val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
-        val action = ContentAction.ClearPermissionRequests("sessionId")
-        doReturn(Job()).`when`(store).dispatch(action)
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
 
-        runBlockingTest {
-            observer.onLocationChange("https://getpocket.com")
-            verify(store).dispatch(action)
-        }
+        val observer = EngineObserver("mozilla", store)
+
+        val request: PermissionRequest = mock()
+
+        store.dispatch(ContentAction.UpdatePermissionsRequest("mozilla", request))
+        store.waitUntilIdle()
+
+        assertEquals(listOf(request), store.state.tabs[0].content.permissionRequestsList)
+
+        observer.onLocationChange("https://getpocket.com")
+        store.waitUntilIdle()
+
+        assertEquals(emptyList<PermissionRequest>(), store.state.tabs[0].content.permissionRequestsList)
     }
 
     @Test
     fun engineObserverDoesNotClearContentPermissionRequestIfSamePageStartsLoading() {
-        val session = Session("https://www.mozilla.org")
-        val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
-        val action = ContentAction.ClearPermissionRequests("sessionId")
-        doReturn(Job()).`when`(store).dispatch(action)
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
 
-        runBlockingTest {
-            observer.onLocationChange("https://www.mozilla.org/hello.html")
-            verify(store, never()).dispatch(action)
-        }
+        val observer = EngineObserver("mozilla", store)
+
+        val request: PermissionRequest = mock()
+
+        store.dispatch(ContentAction.UpdatePermissionsRequest("mozilla", request))
+        store.waitUntilIdle()
+
+        assertEquals(listOf(request), store.state.tabs[0].content.permissionRequestsList)
+
+        observer.onLocationChange("https://www.mozilla.org/hello.html")
+        store.waitUntilIdle()
+
+        assertEquals(listOf(request), store.state.tabs[0].content.permissionRequestsList)
     }
 
     @Test
     fun engineObserverDoesNotClearWebAppManifestIfNewPageInStartUrlScope() {
-        val session = Session("https://www.mozilla.org")
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
         val manifest = WebAppManifest(name = "Mozilla", startUrl = "https://www.mozilla.org")
 
-        val observer = EngineObserver(session, mock())
-        observer.onWebAppManifestLoaded(manifest)
+        val observer = EngineObserver("mozilla", store)
 
-        assertEquals(manifest, session.webAppManifest)
+        observer.onWebAppManifestLoaded(manifest)
+        store.waitUntilIdle()
+
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
 
         observer.onLocationChange("https://www.mozilla.org/hello.html")
+        store.waitUntilIdle()
 
-        assertEquals(manifest, session.webAppManifest)
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
     }
 
     @Test
     fun engineObserverDoesNotClearWebAppManifestIfNewPageInScope() {
-        val session = Session("https://www.mozilla.org/hello/page1.html")
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
         val manifest = WebAppManifest(
             name = "Mozilla",
             startUrl = "https://www.mozilla.org",
             scope = "https://www.mozilla.org/hello/"
         )
 
-        val observer = EngineObserver(session, mock())
-        observer.onWebAppManifestLoaded(manifest)
+        val observer = EngineObserver("mozilla", store)
 
-        assertEquals(manifest, session.webAppManifest)
+        observer.onWebAppManifestLoaded(manifest)
+        store.waitUntilIdle()
+
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
 
         observer.onLocationChange("https://www.mozilla.org/hello/page2.html")
-        assertEquals(manifest, session.webAppManifest)
+        store.waitUntilIdle()
+
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
 
         observer.onLocationChange("https://www.mozilla.org/hello.html")
-        assertNull(session.webAppManifest)
+        store.waitUntilIdle()
+        assertNull(store.state.tabs[0].content.webAppManifest)
     }
 
     @Test
     fun engineObserverPassingHitResult() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
-        val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
+        val observer = EngineObserver("mozilla", store)
+
         val hitResult = HitResult.UNKNOWN("data://foobar")
 
         observer.onLongPress(hitResult)
+        store.waitUntilIdle()
 
-        verify(store).dispatch(
-            ContentAction.UpdateHitResultAction("test-id", hitResult)
-        )
+        assertEquals(hitResult, store.state.tabs[0].content.hitResult)
     }
 
     @Test
     fun engineObserverClearsFindResults() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab", store)
 
         observer.onFindResult(0, 1, false)
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.AddFindResultAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab", action.sessionId)
             assertEquals(FindResultState(0, 1, false), action.findResult)
         }
 
         observer.onFind("mozilla")
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.ClearFindResultsAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab", action.sessionId)
         }
     }
 
     @Test
     fun engineObserverClearsFindResultIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onFindResult(0, 1, false)
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.AddFindResultAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(FindResultState(0, 1, false), action.findResult)
         }
 
         observer.onFindResult(1, 2, true)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.AddFindResultAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(FindResultState(1, 2, true), action.findResult)
         }
 
         observer.onLoadingStateChange(true)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.ClearFindResultsAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
         }
     }
 
     @Test
     fun engineObserverClearsRefreshCanceledIfNewPageStartsLoading() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onRepostPromptCancelled()
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.UpdateRefreshCanceledStateAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertTrue(action.refreshCanceled)
         }
 
         observer.onLoadingStateChange(true)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.UpdateRefreshCanceledStateAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertFalse(action.refreshCanceled)
         }
     }
 
     @Test
     fun engineObserverHandlesOnRepostPromptCancelled() {
-        val session = Session("")
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onRepostPromptCancelled()
-        verify(store).dispatch(ContentAction.UpdateRefreshCanceledStateAction(session.id, true))
+        verify(store).dispatch(ContentAction.UpdateRefreshCanceledStateAction("tab-id", true))
     }
 
     @Test
     fun engineObserverHandlesOnBeforeUnloadDenied() {
-        val session = Session("")
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onBeforeUnloadPromptDenied()
-        verify(store).dispatch(ContentAction.UpdateRefreshCanceledStateAction(session.id, true))
+        verify(store).dispatch(ContentAction.UpdateRefreshCanceledStateAction("tab-id", true))
     }
 
     @Test
     fun engineObserverNotifiesFullscreenMode() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onFullScreenChange(true)
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.FullScreenChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertTrue(action.fullScreenEnabled)
         }
 
         observer.onFullScreenChange(false)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.FullScreenChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertFalse(action.fullScreenEnabled)
         }
     }
 
     @Test
     fun engineObserverNotifiesDesktopMode() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onDesktopModeChange(true)
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.UpdateDesktopModeAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertTrue(action.enabled)
         }
 
         observer.onDesktopModeChange(false)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.UpdateDesktopModeAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertFalse(action.enabled)
         }
     }
@@ -530,13 +681,12 @@ class EngineObserverTest {
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
-        val session = Session("https://www.mozilla.org", id = "test-id")
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onMetaViewportFitChanged(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT)
         store.waitUntilIdle()
         middleware.assertFirstAction(ContentAction.ViewportFitChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT,
                 action.layoutInDisplayCutoutMode)
         }
@@ -544,7 +694,7 @@ class EngineObserverTest {
         observer.onMetaViewportFitChanged(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.ViewportFitChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES,
                 action.layoutInDisplayCutoutMode)
         }
@@ -552,7 +702,7 @@ class EngineObserverTest {
         observer.onMetaViewportFitChanged(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.ViewportFitChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER,
                 action.layoutInDisplayCutoutMode)
         }
@@ -560,45 +710,55 @@ class EngineObserverTest {
         observer.onMetaViewportFitChanged(123)
         store.waitUntilIdle()
         middleware.assertLastAction(ContentAction.ViewportFitChangedAction::class) { action ->
-            assertEquals(session.id, action.sessionId)
+            assertEquals("tab-id", action.sessionId)
             assertEquals(123, action.layoutInDisplayCutoutMode)
         }
     }
 
     @Test
     fun `Engine observer notified when thumbnail is assigned`() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
         val emptyBitmap = spy(Bitmap::class.java)
         observer.onThumbnailChange(emptyBitmap)
 
         verify(store).dispatch(ContentAction.UpdateThumbnailAction(
-            "test-id", emptyBitmap
+            "tab-id", emptyBitmap
         ))
     }
 
     @Test
     fun engineObserverNotifiesWebAppManifest() {
-        val session = Session("https://www.mozilla.org")
-        val observer = EngineObserver(session, mock())
+        val store = BrowserStore(
+            initialState = BrowserState(
+                tabs = listOf(
+                    createTab(
+                        url = "https://www.mozilla.org",
+                        id = "mozilla"
+                    )
+                )
+            )
+        )
+
+        val observer = EngineObserver("mozilla", store)
         val manifest = WebAppManifest(
             name = "Minimal",
             startUrl = "/"
         )
 
         observer.onWebAppManifestLoaded(manifest)
-        assertEquals(manifest, session.webAppManifest)
+        store.waitUntilIdle()
+
+        assertEquals(manifest, store.state.tabs[0].content.webAppManifest)
     }
 
     @Test
     fun engineSessionObserverWithContentPermissionRequests() {
-        val permissionRequest = mock(PermissionRequest::class.java)
-        val session = Session("url", id = "id")
+        val permissionRequest: PermissionRequest = mock()
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
         val action = ContentAction.UpdatePermissionsRequest(
-            session.id,
+            "tab-id",
             permissionRequest
         )
         doReturn(Job()).`when`(store).dispatch(action)
@@ -611,12 +771,11 @@ class EngineObserverTest {
 
     @Test
     fun engineSessionObserverWithAppPermissionRequests() {
-        val permissionRequest = mock(PermissionRequest::class.java)
-        val session = Session("")
+        val permissionRequest: PermissionRequest = mock()
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
         val action = ContentAction.UpdateAppPermissionsRequest(
-            session.id,
+            "tab-id",
             permissionRequest
         )
 
@@ -628,116 +787,121 @@ class EngineObserverTest {
 
     @Test
     fun engineObserverHandlesPromptRequest() {
-        val promptRequest = mock(PromptRequest::class.java)
-        val session = Session(id = "test-session", initialUrl = "")
+        val promptRequest: PromptRequest = mock()
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onPromptRequest(promptRequest)
         verify(store).dispatch(ContentAction.UpdatePromptRequestAction(
-            session.id,
+            "tab-id",
             promptRequest
         ))
     }
 
     @Test
     fun engineObserverHandlesWindowRequest() {
-        val windowRequest = mock(WindowRequest::class.java)
-        val session = Session("")
+        val windowRequest: WindowRequest = mock()
         val store: BrowserStore = mock()
         whenever(store.state).thenReturn(mock())
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onWindowRequest(windowRequest)
         verify(store).dispatch(ContentAction.UpdateWindowRequestAction(
-            session.id,
+            "tab-id",
             windowRequest
         ))
     }
 
     @Test
     fun engineObserverHandlesFirstContentfulPaint() {
-        val session = Session("")
         val store: BrowserStore = mock()
         whenever(store.state).thenReturn(mock())
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onFirstContentfulPaint()
         verify(store).dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(
-            session.id,
+            "tab-id",
             true
         ))
     }
 
     @Test
     fun engineObserverHandlesPaintStatusReset() {
-        val session = Session("")
-        val store = mock(BrowserStore::class.java)
+        val store: BrowserStore = mock()
         whenever(store.state).thenReturn(mock())
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("tab-id", store)
 
         observer.onPaintStatusReset()
         verify(store).dispatch(ContentAction.UpdateFirstContentfulPaintStateAction(
-            session.id,
+            "tab-id",
             false
         ))
     }
 
     @Test
-    fun `media session state is null by default`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
-        store.waitUntilIdle()
-        assertNull(observedMediaSessionState)
-    }
-
-    @Test
     fun `onMediaActivated will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla"
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
+
+        assertNull(store.state.tabs[0].mediaSessionState)
 
         observer.onMediaActivated(mediaSessionController)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.tabs[0].mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
     }
 
     @Test
     fun `onMediaDeactivated will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
+
+        assertNotNull(store.state.findTab("mozilla")?.mediaSessionState)
 
         observer.onMediaDeactivated()
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNull(observedMediaSessionState)
     }
 
     @Test
     fun `onMediaMetadataChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
         val metaData: MediaSession.Metadata = mock()
 
@@ -746,7 +910,7 @@ class EngineObserverTest {
         observer.onMediaMetadataChanged(metaData)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(metaData, observedMediaSessionState?.metadata)
@@ -754,12 +918,19 @@ class EngineObserverTest {
 
     @Test
     fun `onMediaPlaybackStateChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
         val playbackState: MediaSession.PlaybackState = mock()
 
@@ -768,7 +939,7 @@ class EngineObserverTest {
         observer.onMediaPlaybackStateChanged(playbackState)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(playbackState, observedMediaSessionState?.playbackState)
@@ -776,12 +947,19 @@ class EngineObserverTest {
 
     @Test
     fun `onMediaFeatureChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
         val features: MediaSession.Feature = mock()
 
@@ -790,7 +968,7 @@ class EngineObserverTest {
         observer.onMediaFeatureChanged(features)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(features, observedMediaSessionState?.features)
@@ -798,12 +976,19 @@ class EngineObserverTest {
 
     @Test
     fun `onMediaPositionStateChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
         val positionState: MediaSession.PositionState = mock()
 
@@ -812,7 +997,7 @@ class EngineObserverTest {
         observer.onMediaPositionStateChanged(positionState)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(positionState, observedMediaSessionState?.positionState)
@@ -820,12 +1005,19 @@ class EngineObserverTest {
 
     @Test
     fun `onMediaMuteChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
 
         observer.onMediaActivated(mediaSessionController)
@@ -833,7 +1025,7 @@ class EngineObserverTest {
         observer.onMediaMuteChanged(true)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(true, observedMediaSessionState?.muted)
@@ -841,12 +1033,19 @@ class EngineObserverTest {
 
     @Test
     fun `onMediaFullscreenChanged will update the store`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val mediaSessionController: MediaSession.Controller = mock()
         val elementMetadata: MediaSession.ElementMetadata = mock()
 
@@ -855,7 +1054,7 @@ class EngineObserverTest {
         observer.onMediaFullscreenChanged(true, elementMetadata)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
+        val observedMediaSessionState = store.state.findTab("mozilla")?.mediaSessionState
         assertNotNull(observedMediaSessionState)
         assertEquals(mediaSessionController, observedMediaSessionState?.controller)
         assertEquals(true, observedMediaSessionState?.fullscreen)
@@ -863,37 +1062,46 @@ class EngineObserverTest {
     }
 
     @Test
-    fun `updates are ignored when media sessoin is deactivated`() {
-        val store = BrowserStore()
-        val sessionManager = SessionManager(engine = mock(), store = store)
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+    fun `updates are ignored when media session is deactivated`() {
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla"
+                )
+            )
+        ))
+
+        val observer = EngineObserver("mozilla", store)
         val elementMetadata: MediaSession.ElementMetadata = mock()
 
         observer.onMediaFullscreenChanged(true, elementMetadata)
         store.waitUntilIdle()
 
-        val observedMediaSessionState = store.state.findTab(session.id)?.mediaSessionState
-        assertNull(observedMediaSessionState)
+        assertNull(store.state.findTab("mozilla")?.mediaSessionState)
 
         observer.onMediaMuteChanged(true)
         store.waitUntilIdle()
-        assertNull(observedMediaSessionState)
+        assertNull(store.state.findTab("mozilla")?.mediaSessionState)
     }
 
     @Test
     fun `onExternalResource will update the store`() {
-        val store = BrowserStore()
         val response = mock<Response>()
-        val sessionManager = SessionManager(engine = mock(), store = store)
 
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "mozilla",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
 
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("mozilla", store)
 
         observer.onExternalResource(
                 url = "mozilla.org/file.txt",
@@ -906,7 +1114,7 @@ class EngineObserverTest {
 
         store.waitUntilIdle()
 
-        val tab = store.state.findTab("test-tab")!!
+        val tab = store.state.findTab("mozilla")!!
 
         assertEquals("mozilla.org/file.txt", tab.content.download?.url)
         assertEquals("file.txt", tab.content.download?.fileName)
@@ -919,14 +1127,19 @@ class EngineObserverTest {
 
     @Test
     fun `onExternalResource with negative contentLength`() {
-        val store = BrowserStore()
+        val store = BrowserStore(initialState = BrowserState(
+            tabs = listOf(
+                createTab(
+                    url = "https://www.mozilla.org",
+                    id = "test-tab",
+                    mediaSessionState = MediaSessionState(
+                        controller = mock()
+                    )
+                )
+            )
+        ))
 
-        val sessionManager = SessionManager(engine = mock(), store = store)
-
-        val session = Session("https://www.mozilla.org", id = "test-tab").also {
-            sessionManager.add(it)
-        }
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-tab", store)
 
         observer.onExternalResource(url = "mozilla.org/file.txt", contentLength = -1)
 
@@ -939,10 +1152,8 @@ class EngineObserverTest {
 
     @Test
     fun `onCrashStateChanged will update session and notify observer`() {
-        val session = Session("https://www.mozilla.org", id = "test-id")
-
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
 
         observer.onCrash()
 
@@ -958,9 +1169,7 @@ class EngineObserverTest {
             middleware = listOf(middleware)
         )
 
-        val session = Session("https://www.mozilla.org")
-
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         observer.onLocationChange("https://www.mozilla.org/en-US/")
 
         store.waitUntilIdle()
@@ -971,14 +1180,13 @@ class EngineObserverTest {
     @Test
     fun `onLoadRequest clears search terms for requests triggered by web content`() {
         val url = "https://www.mozilla.org"
-        val session = Session(url, id = "test-id")
 
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
 
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         observer.onLoadRequest(url = url, triggeredByRedirect = false, triggeredByWebContent = true)
 
         store.waitUntilIdle()
@@ -992,14 +1200,13 @@ class EngineObserverTest {
     @Test
     fun `onLoadRequest clears search terms for requests triggered by redirect`() {
         val url = "https://www.mozilla.org"
-        val session = Session(url, id = "test-id")
 
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
 
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         observer.onLoadRequest(url = url, triggeredByRedirect = true, triggeredByWebContent = false)
 
         store.waitUntilIdle()
@@ -1014,26 +1221,30 @@ class EngineObserverTest {
     @Suppress("DEPRECATION") // Session observable is deprecated
     fun `onLoadRequest notifies session observers`() {
         val url = "https://www.mozilla.org"
-        val sessionObserver: Session.Observer = mock()
-        val session = Session(url)
-        session.register(sessionObserver)
+        val store: BrowserStore = mock()
 
-        val observer = EngineObserver(session, mock())
+        val observer = EngineObserver("test-id", store)
         observer.onLoadRequest(url = url, triggeredByRedirect = true, triggeredByWebContent = false)
-        verify(sessionObserver).onLoadRequest(eq(session), eq(url), eq(true), eq(false))
+
+        verify(store)
+            .dispatch(
+                ContentAction.UpdateLoadRequestAction(
+                    "test-id",
+                    LoadRequestState(url, triggeredByRedirect = true, triggeredByUser = false)
+                )
+            )
     }
 
     @Test
     fun `onLoadRequest does not clear search terms for requests not triggered by user interacting with web content`() {
         val url = "https://www.mozilla.org"
-        val session = Session(url, id = "test-id")
 
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
 
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         observer.onLoadRequest(url = url, triggeredByRedirect = false, triggeredByWebContent = false)
 
         store.waitUntilIdle()
@@ -1043,27 +1254,23 @@ class EngineObserverTest {
     @Test
     fun `onLaunchIntentRequest dispatches UpdateAppIntentAction`() {
         val url = "https://www.mozilla.org"
-        val session = Session(url)
 
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         val intent: Intent = mock()
         observer.onLaunchIntentRequest(url = url, appIntent = intent)
 
-        verify(store).dispatch(ContentAction.UpdateAppIntentAction(session.id, AppIntentState(url, intent)))
+        verify(store).dispatch(ContentAction.UpdateAppIntentAction("test-id", AppIntentState(url, intent)))
     }
 
     @Test
     fun `onNavigateBack clears search terms when navigating back`() {
-        val url = "https://www.mozilla.org"
-        val session = Session(url, id = "test-id")
-
         val middleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val store = BrowserStore(
             middleware = listOf(middleware)
         )
 
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
         observer.onNavigateBack()
         store.waitUntilIdle()
 
@@ -1075,14 +1282,13 @@ class EngineObserverTest {
 
     @Test
     fun `onHistoryStateChanged dispatches UpdateHistoryStateAction`() {
-        val session = Session("")
         val store: BrowserStore = mock()
-        val observer = EngineObserver(session, store)
+        val observer = EngineObserver("test-id", store)
 
         observer.onHistoryStateChanged(emptyList(), 0)
         verify(store).dispatch(
             ContentAction.UpdateHistoryStateAction(
-                session.id,
+                "test-id",
                 emptyList(),
                 currentIndex = 0
             )
@@ -1095,7 +1301,7 @@ class EngineObserverTest {
 
         verify(store).dispatch(
             ContentAction.UpdateHistoryStateAction(
-                session.id,
+                "test-id",
                 listOf(
                     HistoryItem("Firefox", "https://firefox.com"),
                     HistoryItem("Mozilla", "http://mozilla.org")

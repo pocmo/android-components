@@ -6,7 +6,6 @@ package mozilla.components.browser.state.engine.middleware
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.state.BrowserState
@@ -19,7 +18,6 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.support.test.ext.joinBlocking
 import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.mock
-import mozilla.components.support.test.whenever
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -40,12 +38,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -76,12 +71,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab", private = true)
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -114,12 +106,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab", contextId = "test-container")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -151,7 +140,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -187,7 +175,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -225,7 +212,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -266,12 +252,9 @@ class EngineDelegateMiddlewareTest {
         )
         val tab = createTab("https://www.mozilla.org", id = "test-tab", parent = parent)
 
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -305,12 +288,9 @@ class EngineDelegateMiddlewareTest {
         val parent = createTab("https://getpocket.com", id = "parent-tab")
         val tab = createTab("https://www.mozilla.org", id = "test-tab", parent = parent)
 
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -341,7 +321,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = mock(),
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -388,13 +367,9 @@ class EngineDelegateMiddlewareTest {
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
 
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
-
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -426,7 +401,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -458,12 +432,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -500,12 +471,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -538,12 +506,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -573,12 +538,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -608,12 +570,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -644,12 +603,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -680,12 +636,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -716,12 +669,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -751,12 +701,9 @@ class EngineDelegateMiddlewareTest {
         val scope = CoroutineScope(dispatcher)
 
         val tab = createTab("https://www.mozilla.org", id = "test-tab")
-        val session: Session = mock()
-        whenever(session.id).thenReturn(tab.id)
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { session },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -788,7 +735,6 @@ class EngineDelegateMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = mock(),
-                sessionLookup = mock(),
                 scope = scope
             ),
             initialState = BrowserState(

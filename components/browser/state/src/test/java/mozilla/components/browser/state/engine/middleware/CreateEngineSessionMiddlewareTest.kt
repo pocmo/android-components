@@ -8,7 +8,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.BrowserState
@@ -28,6 +27,8 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.anyBoolean
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -49,10 +50,7 @@ class CreateEngineSessionMiddlewareTest {
         val engineSession: EngineSession = mock()
         whenever(engine.createSession(anyBoolean(), any())).thenReturn(engineSession)
 
-        val session: Session = mock()
-        val sessionLookup = { _: String -> session }
-
-        val middleware = CreateEngineSessionMiddleware(engine, sessionLookup, scope)
+        val middleware = CreateEngineSessionMiddleware(engine, scope)
         val tab = createTab("https://www.mozilla.org", id = "1")
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf(tab)),
@@ -79,10 +77,8 @@ class CreateEngineSessionMiddlewareTest {
         val engineSession: EngineSession = mock()
         whenever(engine.createSession(anyBoolean(), any())).thenReturn(engineSession)
         val engineSessionState: EngineSessionState = mock()
-        val session: Session = mock()
-        val sessionLookup = { _: String -> session }
 
-        val middleware = CreateEngineSessionMiddleware(engine, sessionLookup, scope)
+        val middleware = CreateEngineSessionMiddleware(engine, scope)
         val tab = createTab("https://www.mozilla.org", id = "1")
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf(tab)),
@@ -102,10 +98,9 @@ class CreateEngineSessionMiddlewareTest {
     @Test
     fun `creates no engine session if tab does not exist`() = runBlocking {
         val engine: Engine = mock()
-        val session: Session = mock()
-        val sessionLookup = { _: String -> session }
+        `when`(engine.createSession(anyBoolean(), anyString())).thenReturn(mock())
 
-        val middleware = CreateEngineSessionMiddleware(engine, sessionLookup, scope)
+        val middleware = CreateEngineSessionMiddleware(engine, scope)
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf()),
             middleware = listOf(middleware)
@@ -122,16 +117,20 @@ class CreateEngineSessionMiddlewareTest {
     @Test
     fun `creates no engine session if session does not exist`() = runBlocking {
         val engine: Engine = mock()
-        val sessionLookup = { _: String -> null }
+        `when`(engine.createSession(anyBoolean(), anyString())).thenReturn(mock())
 
-        val middleware = CreateEngineSessionMiddleware(engine, sessionLookup, scope)
+        val middleware = CreateEngineSessionMiddleware(engine, scope)
         val tab = createTab("https://www.mozilla.org", id = "1")
+
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf(tab)),
             middleware = listOf(middleware)
         )
 
-        store.dispatch(EngineAction.CreateEngineSessionAction(tab.id)).joinBlocking()
+        store.dispatch(
+            EngineAction.CreateEngineSessionAction("non-existent")
+        ).joinBlocking()
+
         store.waitUntilIdle()
         dispatcher.advanceUntilIdle()
 

@@ -6,7 +6,6 @@ package mozilla.components.browser.state.engine.middleware
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.action.CrashAction
 import mozilla.components.browser.state.state.BrowserState
@@ -36,7 +35,6 @@ class CrashMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { mock() },
                 scope = scope
             ),
             initialState = BrowserState(
@@ -108,7 +106,6 @@ class CrashMiddlewareTest {
         val store = BrowserStore(
             middleware = EngineMiddleware.create(
                 engine = engine,
-                sessionLookup = { Session("https://www.mozilla.org") },
                 scope = scope
             ),
             initialState = BrowserState(

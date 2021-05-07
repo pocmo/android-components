@@ -12,7 +12,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import mozilla.components.browser.session.Session
 import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.BrowserState
@@ -23,8 +22,8 @@ import mozilla.components.support.test.any
 import mozilla.components.support.test.ext.joinBlocking
 import mozilla.components.support.test.libstate.ext.waitUntilIdle
 import mozilla.components.support.test.mock
-import mozilla.components.support.test.whenever
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -57,7 +56,7 @@ class LinkingMiddlewareTest {
 
     @Test
     fun `loads URL after linking`() {
-        val middleware = LinkingMiddleware(scope) { null }
+        val middleware = LinkingMiddleware(scope)
 
         val tab = createTab("https://www.mozilla.org", id = "1")
         val store = BrowserStore(
@@ -75,7 +74,7 @@ class LinkingMiddlewareTest {
 
     @Test
     fun `loads URL with parent after linking`() {
-        val middleware = LinkingMiddleware(scope) { null }
+        val middleware = LinkingMiddleware(scope)
 
         val parent = createTab("https://www.mozilla.org", id = "1")
         val child = createTab("https://www.firefox.com", id = "2", parent = parent)
@@ -99,7 +98,7 @@ class LinkingMiddlewareTest {
 
     @Test
     fun `loads URL without parent for extension URLs`() {
-        val middleware = LinkingMiddleware(scope) { null }
+        val middleware = LinkingMiddleware(scope)
 
         val parent = createTab("https://www.mozilla.org", id = "1")
         val child = createTab("moz-extension://1234", id = "2", parent = parent)
@@ -123,7 +122,7 @@ class LinkingMiddlewareTest {
 
     @Test
     fun `skips loading URL if specified in action`() {
-        val middleware = LinkingMiddleware(scope) { null }
+        val middleware = LinkingMiddleware(scope)
 
         val tab = createTab("https://www.mozilla.org", id = "1")
         val store = BrowserStore(
@@ -141,7 +140,7 @@ class LinkingMiddlewareTest {
 
     @Test
     fun `does nothing if linked tab does not exist`() {
-        val middleware = LinkingMiddleware(scope) { null }
+        val middleware = LinkingMiddleware(scope)
 
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf()),
@@ -161,10 +160,7 @@ class LinkingMiddlewareTest {
         val tab1 = createTab("https://www.mozilla.org", id = "1")
         val tab2 = createTab("https://www.mozilla.org", id = "2")
 
-        val session2: Session = mock()
-        whenever(session2.id).thenReturn(tab2.id)
-        val sessionLookup = { id: String -> if (id == tab2.id) session2 else null }
-        val middleware = LinkingMiddleware(scope, sessionLookup)
+        val middleware = LinkingMiddleware(scope)
 
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf(tab1, tab2)),
@@ -183,7 +179,10 @@ class LinkingMiddlewareTest {
 
         verify(engineSession2).register(engineObserver!!)
         engineObserver.onTitleChange("test")
-        verify(session2).title = "test"
+
+        store.waitUntilIdle()
+
+        assertEquals("test", store.state.tabs[1].content.title)
     }
 
     @Test
@@ -191,11 +190,7 @@ class LinkingMiddlewareTest {
         val tab1 = createTab("https://www.mozilla.org", id = "1")
         val tab2 = createTab("https://www.mozilla.org", id = "2")
 
-        val session1: Session = mock()
-        whenever(session1.id).thenReturn(tab1.id)
-
-        val sessionLookup = { id: String -> if (id == tab1.id) session1 else null }
-        val middleware = LinkingMiddleware(scope, sessionLookup)
+        val middleware = LinkingMiddleware(scope)
 
         val store = BrowserStore(
             initialState = BrowserState(tabs = listOf(tab1, tab2)),
